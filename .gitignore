@@ -1,0 +1,16 @@
+# 本地覆盖（不提交）
+*.local.*
+.env.local
+.env
+
+# Web 工作台构建产物
+web-workbench/node_modules/
+web-workbench/.next/
+web-workbench/dist/
+web-workbench/.wrangler/
+
+# 编辑器
+.idea/
+.vscode/
+*.swp
+*.swo

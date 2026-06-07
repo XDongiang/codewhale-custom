@@ -1,0 +1,21 @@
+{
+  "timeouts": {
+    "connect_timeout": 15,
+    "execute_timeout": 120,
+    "read_timeout": 180
+  },
+  "servers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-playwright"],
+      "env": {},
+      "disabled": false
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-filesystem", "/home/sean/workspace"],
+      "env": {},
+      "disabled": false
+    }
+  }
+}
