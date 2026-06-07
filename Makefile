@@ -9,7 +9,9 @@ CODEWHALE_BIN    := $(shell which codewhale 2>/dev/null || echo "")
 # 当前仓库路径（Makefile 所在目录）
 REPO_ROOT        := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-.PHONY: install uninstall status check doctor help
+.PHONY: install uninstall status check doctor start stop dev-workbench build-workbench help
+
+SCRIPTS_DIR := $(REPO_ROOT)/scripts
 
 ## install: 部署所有定制层到 CodeWhale 扩展目录
 install: check
@@ -141,12 +143,36 @@ check:
 doctor: check
 	@$(CODEWHALE_BIN) doctor
 
+WEBBENCH_DIR := $(REPO_ROOT)/web-workbench
+
+.PHONY: dev-workbench build-workbench
+
+## start: 一键启动 CodeWhale Runtime + Web Workbench
+start:
+	@bash $(SCRIPTS_DIR)/start.sh
+
+## stop: 停止所有服务
+stop:
+	@bash $(SCRIPTS_DIR)/stop.sh
+
+## dev-workbench: 单独启动 Web Workbench 开发服务器（localhost:3000）
+dev-workbench:
+	@cd $(WEBBENCH_DIR) && npm run dev
+
+## build-workbench: 构建 Web Workbench 生产版本
+build-workbench:
+	@cd $(WEBBENCH_DIR) && npm run build
+
 ## help: 显示帮助
 help:
 	@echo "CodeWhale Custom 部署工具"
 	@echo ""
-	@echo "  make install    部署到 ~/.codewhale/"
-	@echo "  make uninstall  移除符号链接"
-	@echo "  make status     查看部署状态"
-	@echo "  make doctor     运行 codewhale doctor"
+	@echo "  make install          部署到 ~/.codewhale/"
+	@echo "  make uninstall        移除符号链接"
+	@echo "  make status           查看部署状态"
+	@echo "  make doctor           运行 codewhale doctor"
+	@echo "  make start            一键启动 (serve + Web UI)"
+	@echo "  make stop             停止所有服务"
+	@echo "  make dev-workbench    单独启动 Web 工作台"
+	@echo "  make build-workbench  构建 Web 工作台生产版本"
 	@echo ""

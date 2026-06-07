@@ -5,22 +5,25 @@
 
 ## 项目技术栈
 
-- **框架**: Vue 3 (Composition API) 或 React 18+（按项目选择）
+- **框架**: React 18+ (函数组件 + Hooks)
 - **语言**: TypeScript 5.x 严格模式
 - **样式**: Tailwind CSS 3.x，不写内联 style
 - **包管理**: pnpm（优先）或 npm
-- **构建**: Vite
-- **测试**: Vitest + Vue Test Utils / React Testing Library
+- **构建**: Next.js 15 (App Router) 或 Vite
+- **状态管理**: Zustand（轻量）或 TanStack Query（服务端状态）
+- **测试**: Vitest + React Testing Library
 - **Lint**: ESLint flat config + Prettier
 
 ## 代码风格
 
-- 使用 `<script setup lang="ts">` 语法
-- Props/Emits 使用 TypeScript 类型推导
-- 组件名使用 PascalCase，文件名使用 kebab-case
+- 使用函数组件 + Hooks，不写 class 组件
+- Props 使用 interface 定义，复杂组件用 `React.forwardRef`
+- 组件名使用 PascalCase，文件名使用 PascalCase（.tsx）
 - 每个组件文件不超过 300 行，超出则拆分
-- 复杂逻辑抽取为 composable（`useXxx`）
+- 复杂逻辑抽取为自定义 Hook（`useXxx`）
 - 避免 any 类型，必要时使用 unknown + 类型守卫
+- 用 `React.memo` 优化重渲染开销大的纯展示组件
+- `useCallback`/`useMemo` 仅在有实际性能收益时使用
 
 ## 文件组织
 
@@ -28,10 +31,10 @@
 src/
 ├── api/          # API 层（请求函数 + hooks）
 ├── components/   # 通用组件
-├── composables/  # 组合式函数
+├── hooks/        # 自定义 Hooks
 ├── layouts/      # 布局组件
 ├── pages/        # 页面组件（路由级别）
-├── stores/       # 状态管理（Pinia）
+├── stores/       # 状态管理（Zustand）
 ├── types/        # 共享类型定义
 └── utils/        # 工具函数
 ```

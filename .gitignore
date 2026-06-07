@@ -1,16 +1,43 @@
-# 本地覆盖（不提交）
+# ── 本地覆盖（不提交）──
 *.local.*
 .env.local
 .env
 
-# Web 工作台构建产物
+# ── Web 工作台 ──
 web-workbench/node_modules/
-web-workbench/.next/
 web-workbench/dist/
 web-workbench/.wrangler/
 
-# 编辑器
+# ── TypeScript 增量编译缓存 ──
+*.tsbuildinfo
+
+# ── CodeWhale 运行时（自动生成，不追踪）──
+.codewhale/
+
+# ── 系统文件 ──
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+
+# ── 编辑器 ──
 .idea/
 .vscode/
 *.swp
 *.swo
+*~
+
+# ── 日志 ──
+*.log
+logs/
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# ── 临时文件 ──
+*.tmp
+*.temp
+/tmp/

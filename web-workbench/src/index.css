@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased;
+  }
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-gray-900;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-700 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-600;
+}
+
+/* Markdown 渲染样式 */
+.prose-stream p {
+  @apply mb-2 leading-relaxed;
+}
+.prose-stream pre {
+  @apply my-2 rounded-lg bg-gray-900 p-4 overflow-x-auto text-sm;
+}
+.prose-stream code {
+  @apply rounded bg-gray-800 px-1 py-0.5 text-sm font-mono text-emerald-400;
+}
+.prose-stream pre code {
+  @apply bg-transparent p-0 text-gray-200;
+}
+.prose-stream ul {
+  @apply list-disc pl-5 mb-2;
+}
+.prose-stream ol {
+  @apply list-decimal pl-5 mb-2;
+}
+.prose-stream li {
+  @apply mb-1;
+}
+
+/* SSE 流式光标闪烁 */
+.cursor-blink::after {
+  content: '▊';
+  @apply animate-pulse text-blue-400;
+}

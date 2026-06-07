@@ -2,15 +2,6 @@
 
 基于 CodeWhale Runtime API (`codewhale serve --http`) 的 Web 前端工作台。
 
-## 架构
-
-```
-浏览器 (LAN) ──HTTP/SSE──> Web Workbench (Next.js) ──HTTP/SSE──> codewhale serve --http
-                                                                    ├── /v1/threads
-                                                                    ├── /v1/threads/{id}/resume
-                                                                    └── SSE events
-```
-
 ## 快速开始
 
 ### 1. 启动 CodeWhale Runtime API
@@ -19,39 +10,73 @@
 codewhale serve --http --host 0.0.0.0 --port 7878 --auth-token dev-token
 ```
 
-记下终端输出的局域网 URL。
-
 ### 2. 启动工作台前端
 
 ```bash
 cd web-workbench
-cp .env.example .env.local   # 填写 RUNTIME_API_URL 和 AUTH_TOKEN
 npm install
 npm run dev                   # http://localhost:3000
 ```
 
-### 3. 局域网访问
+### 3. 配置连接
 
-浏览器打开 `http://<你的局域网IP>:3000`
+打开浏览器访问 `http://localhost:3000`，在 Settings 页面填写：
+- **API URL**: `http://localhost:7878`
+- **Auth Token**: `dev-token`
 
-## 功能规划
+点击 "Test Connection" 验证连通性。
 
-- [ ] Thread 列表（创建/删除/搜索）
-- [ ] 实时对话界面（SSE 流式输出）
-- [ ] Tool 审批面板（approve/reject）
-- [ ] 文件浏览（workspace 目录树）
-- [ ] Skill 管理（启用/禁用/查看）
-- [ ] MCP Server 状态面板
-- [ ] 移动端适配（响应式）
+### 4. 局域网访问
 
-## 技术栈（建议）
+浏览器打开 `http://<你的局域网IP>:3000` 即可从其他设备访问。
 
-- **框架**: Next.js 15 (App Router) 或 Nuxt 3
-- **样式**: Tailwind CSS
-- **实时通信**: EventSource (SSE) + fetch
-- **状态管理**: Zustand 或 Pinia
+## 功能
 
-## Runtime API 关键端点
+- **Thread 管理**: 创建、列举、删除对话线程
+- **实时对话**: SSE 流式输出，markdown 渲染
+- **Tool 审批**: 实时审批/拒绝 CodeWhale 的工具调用
+- **连接配置**: 可视化配置 API 地址和认证 Token
+
+## 技术栈
+
+- **构建**: Vite 6
+- **框架**: React 18 + TypeScript 5
+- **样式**: Tailwind CSS 3
+- **路由**: React Router 6
+- **状态**: Zustand 5
+- **SSE**: @microsoft/fetch-event-source
+
+## 项目结构
+
+```
+web-workbench/
+├── index.html
+├── package.json
+├── vite.config.ts
+├── tailwind.config.ts
+├── tsconfig.json
+└── src/
+    ├── main.tsx              # 入口
+    ├── App.tsx                # 路由
+    ├── index.css              # 全局样式
+    ├── types/index.ts         # 类型定义
+    ├── stores/
+    │   ├── settings-store.ts  # 连接配置
+    │   └── chat-store.ts      # 对话状态
+    ├── lib/
+    │   ├── api/client.ts      # API 客户端
+    │   └── hooks/useSSE.ts    # SSE Hook
+    ├── components/
+    │   └── layout/
+    │       ├── AppShell.tsx    # 布局壳
+    │       └── Sidebar.tsx    # 侧边导航
+    └── pages/
+        ├── ThreadList.tsx     # Thread 列表
+        ├── ChatView.tsx       # 聊天界面
+        └── SettingsPage.tsx   # 配置页
+```
+
+## Runtime API 端点
 
 | 端点 | 方法 | 用途 |
 |---|---|---|
@@ -61,5 +86,3 @@ npm run dev                   # http://localhost:3000
 | `/v1/threads/{id}/resume` | POST | 恢复会话（SSE 流） |
 | `/v1/threads/{id}/fork` | POST | 分叉会话 |
 | `/v1/approvals/{id}` | POST | 审批 Tool 调用 |
-
-认证方式：`Authorization: Bearer <token>` 或 `?token=<token>`
