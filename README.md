@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/xdongiang-codewhale-custom-badge.png)](https://mseep.ai/app/xdongiang-codewhale-custom)
+
 # CodeWhale Custom — 前端开发定制层
 
 基于 [CodeWhale](https://github.com/Hmbown/CodeWhale) 的深度定制配置，专注 **Web 前端开发** 场景。
