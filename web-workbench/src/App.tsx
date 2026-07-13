@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { AppShell } from './components/layout/AppShell'
 import { ChatView } from './pages/ChatView'
 import { HistoryPage } from './pages/HistoryPage'
+import { MonitorPage } from './pages/MonitorPage'
 import { SettingsPage } from './pages/SettingsPage'
 
 export function App() {
@@ -11,6 +12,7 @@ export function App() {
         <Route path="/" element={<ChatView />} />
         <Route path="/chat/:id" element={<ChatView />} />
         <Route path="/history" element={<HistoryPage />} />
+        <Route path="/monitor" element={<MonitorPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

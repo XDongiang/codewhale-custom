@@ -14,7 +14,6 @@ export function HistoryPage() {
   const [editTitle, setEditTitle] = useState('')
   const clientRef = useRef<CodeWhaleClient>(getClient(settings))
 
-  // Update client when settings change
   useEffect(() => {
     clientRef.current = getClient(settings)
   }, [settings.apiUrl, settings.authToken])
@@ -27,23 +26,23 @@ export function HistoryPage() {
       data.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
       setThreads(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load history')
+      setError(err instanceof Error ? err.message : '加载历史记录失败')
     } finally {
       setLoading(false)
     }
-  }, []) // stable — no dependency on client object
+  }, [])
 
   useEffect(() => {
     void loadThreads()
   }, [loadThreads])
 
   const handleArchive = async (id: string) => {
-    if (!confirm('Archive this conversation? It will be hidden from history.')) return
+    if (!confirm('确定归档此对话？归档后将不在历史列表中显示。')) return
     try {
       await clientRef.current.archiveThread(id)
       setThreads((prev) => prev.filter((t) => t.id !== id))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to archive')
+      setError(err instanceof Error ? err.message : '归档失败')
     }
   }
 
@@ -64,32 +63,32 @@ export function HistoryPage() {
 
   function threadLabel(t: ThreadRecord): string {
     if (t.title) return t.title
-    const date = new Date(t.created_at).toLocaleDateString()
+    const date = new Date(t.created_at).toLocaleDateString('zh-CN')
     return `${t.model} · ${date}`
   }
 
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-800 px-6 py-4">
+      <div className="flex items-center justify-between border-b border-slate-200/10 px-6 py-4">
         <div>
-          <h1 className="text-lg font-semibold text-gray-100">History</h1>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {threads.length} conversation{threads.length !== 1 ? 's' : ''}
+          <h1 className="text-lg font-semibold text-slate-100">对话历史</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            共 {threads.length} 个对话
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => void loadThreads()}
-            className="rounded-lg px-3 py-1.5 text-sm text-gray-400 hover:bg-gray-800 hover:text-gray-200 transition-colors"
+            className="rounded-lg px-3 py-1.5 text-sm text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 transition-colors"
           >
-            🔄 Refresh
+            🔄 刷新
           </button>
           <button
             onClick={() => navigate('/')}
-            className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-500 transition-colors"
           >
-            + New Chat
+            + 新建对话
           </button>
         </div>
       </div>
@@ -97,34 +96,34 @@ export function HistoryPage() {
       {/* List */}
       <div className="flex-1 overflow-y-auto">
         {error && (
-          <div className="mx-6 mt-4 rounded-lg border border-red-800 bg-red-900/30 px-4 py-3 text-sm text-red-300">
+          <div className="mx-6 mt-4 rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
             {error}
-            <button onClick={() => void loadThreads()} className="ml-3 underline hover:text-red-200">
-              Retry
+            <button onClick={() => void loadThreads()} className="ml-3 underline hover:text-red-300">
+              重试
             </button>
           </div>
         )}
 
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-gray-500">Loading...</div>
+          <div className="flex items-center justify-center py-20 text-slate-500">加载中...</div>
         ) : threads.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+          <div className="flex flex-col items-center justify-center py-20 text-slate-500">
             <span className="text-4xl mb-3">📋</span>
-            <p className="text-sm">No conversation history yet</p>
+            <p className="text-sm">暂无对话历史</p>
             <button
               onClick={() => navigate('/')}
-              className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+              className="mt-4 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-500 transition-colors"
             >
-              Start a new chat
+              开始新对话
             </button>
           </div>
         ) : (
-          <div className="divide-y divide-gray-800">
+          <div className="divide-y divide-slate-200/5">
             {threads.map((t) => (
               <div
                 key={t.id}
                 onClick={() => navigate(`/chat/${t.id}`)}
-                className="flex cursor-pointer items-center justify-between px-6 py-3 hover:bg-gray-900 transition-colors"
+                className="group flex cursor-pointer items-center justify-between px-6 py-3.5 hover:bg-slate-800/30 transition-colors"
               >
                 <div className="min-w-0 flex-1">
                   {editingId === t.id ? (
@@ -138,26 +137,26 @@ export function HistoryPage() {
                       }}
                       onBlur={() => void handleSaveRename(t.id)}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-full rounded border border-blue-500 bg-gray-900 px-2 py-0.5 text-sm text-gray-200 focus:outline-none"
+                      className="w-full rounded border border-blue-500 bg-slate-900 px-2 py-0.5 text-sm text-slate-200 focus:outline-none"
                       autoFocus
                     />
                   ) : (
-                    <p className="truncate text-sm font-medium text-gray-200">
+                    <p className="truncate text-sm font-medium text-slate-200 group-hover:text-slate-100">
                       {threadLabel(t)}
                     </p>
                   )}
-                  <p className="text-xs text-gray-500">
-                    {t.mode} · {new Date(t.updated_at).toLocaleString()}
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {t.mode === 'agent' ? 'Agent 模式' : t.mode} · {new Date(t.updated_at).toLocaleString('zh-CN')}
                   </p>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       handleStartRename(t)
                     }}
-                    className="rounded p-1 text-gray-600 hover:bg-gray-800 hover:text-blue-400 transition-colors"
-                    title="Rename"
+                    className="rounded p-1.5 text-slate-600 hover:bg-slate-800 hover:text-blue-400 transition-colors"
+                    title="重命名"
                   >
                     ✏️
                   </button>
@@ -166,8 +165,8 @@ export function HistoryPage() {
                       e.stopPropagation()
                       void handleArchive(t.id)
                     }}
-                    className="rounded p-1 text-gray-600 hover:bg-gray-800 hover:text-red-400 transition-colors"
-                    title="Archive"
+                    className="rounded p-1.5 text-slate-600 hover:bg-slate-800 hover:text-red-400 transition-colors"
+                    title="归档"
                   >
                     🗑️
                   </button>

@@ -5,6 +5,7 @@ import { useSettingsStore } from '../../stores/settings-store'
 import { useChatStore } from '../../stores/chat-store'
 
 interface SSEHandlers {
+  onEvent?: (event: RuntimeEvent) => void
   onError?: (error: Error) => void
   onClose?: () => void
 }
@@ -27,6 +28,7 @@ export function useSSE() {
         method: 'GET',
         headers: {
           Accept: 'text/event-stream',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         signal: controller.signal,
         openWhenHidden: true,
@@ -36,9 +38,10 @@ export function useSSE() {
             if (!msg.data || msg.data === 'keepalive') return
 
             const event = JSON.parse(msg.data) as RuntimeEvent
+            handlers.onEvent?.(event)
             handleRuntimeEvent(event)
           } catch {
-            // Ignore non-JSON events (keepalives, etc.)
+            // Ignore non-JSON events
           }
         },
 
@@ -55,6 +58,9 @@ export function useSSE() {
       }).catch((err) => {
         if (err.name !== 'AbortError') {
           handlers.onError?.(err)
+        } else {
+          // User manually stopped — ensure streaming state is cleared
+          handlers.onClose?.()
         }
         setIsConnected(false)
       })

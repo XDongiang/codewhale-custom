@@ -5,17 +5,19 @@
     "read_timeout": 180
   },
   "servers": {
-    "playwright": {
-      "command": "npx",
-      "args": ["-y", "@anthropic/mcp-server-playwright"],
+    "weibo": {
+      "command": "/home/sean/miniforge3/envs/test/bin/mcp-server-weibo",
+      "args": [],
       "env": {},
-      "disabled": false
+      "disabled": false,
+      "comment": "微博热搜/搜索/用户动态。无需登录，偶尔 409 重试即可"
     },
-    "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@anthropic/mcp-server-filesystem", "/home/sean/workspace"],
+    "agent-reach": {
+      "command": "agent-reach",
+      "args": ["mcp"],
       "env": {},
-      "disabled": false
+      "disabled": true,
+      "comment": "Agent-Reach 统一 MCP（可选）。安装: pipx install https://github.com/Panniantong/agent-reach/archive/main.zip"
     }
   }
 }

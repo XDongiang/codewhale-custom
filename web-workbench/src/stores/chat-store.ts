@@ -1,6 +1,17 @@
 import { create } from 'zustand'
 import type { ThreadRecord, TurnRecord, TurnItemRecord } from '../types'
 
+/** A step in the workflow (shown as status in UI) */
+export interface WorkflowStep {
+  id: string
+  /** Platform or action label, e.g. "微博", "小红书", "名单匹配" */
+  label: string
+  /** Current status */
+  status: 'pending' | 'running' | 'done' | 'error'
+  /** Optional detail, e.g. "找到 23 条结果" */
+  detail?: string
+}
+
 interface ChatState {
   // Data
   thread: ThreadRecord | null
@@ -13,6 +24,12 @@ interface ChatState {
   streamingItemId: string | null
   /** accumulated delta text for the streaming item (before item.completed) */
   streamingContent: string
+
+  // Workflow state
+  workflowSteps: WorkflowStep[]
+  setWorkflowSteps: (steps: WorkflowStep[]) => void
+  updateWorkflowStep: (id: string, patch: Partial<WorkflowStep>) => void
+  clearWorkflow: () => void
 
   // Actions
   setThreadDetail: (thread: ThreadRecord, turns: TurnRecord[], items: TurnItemRecord[]) => void
@@ -119,5 +136,17 @@ export const useChatStore = create<ChatState>((set) => ({
       isStreaming: false,
       streamingItemId: null,
       streamingContent: '',
+      workflowSteps: [],
     }),
+
+  // Workflow
+  workflowSteps: [],
+  setWorkflowSteps: (steps) => set({ workflowSteps: steps }),
+  updateWorkflowStep: (id, patch) =>
+    set((s) => ({
+      workflowSteps: s.workflowSteps.map((st) =>
+        st.id === id ? { ...st, ...patch } : st
+      ),
+    })),
+  clearWorkflow: () => set({ workflowSteps: [] }),
 }))

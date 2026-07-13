@@ -37,6 +37,10 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 
+# ── MCP 工具本地镜像（需手动下载，不追踪）──
+mcp-servers/mcp-server-weibo/
+mcp-servers/xiaohongshu-cli/
+
 # ── 临时文件 ──
 *.tmp
 *.temp

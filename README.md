@@ -1,161 +1,238 @@
-# CodeWhale Custom — 前端开发定制层
+# 华师 AI 工作台
 
-基于 [CodeWhale](https://github.com/Hmbown/CodeWhale) 的深度定制配置，专注 **Web 前端开发** 场景。
+基于 [CodeWhale](https://github.com/Hmbown/CodeWhale) 定制的**高校舆情监控系统**，为华中师范大学提供跨平台舆情搜索、名单匹配、负面预警和结构化报告。
 
 ## 设计原则
 
-- **零侵入**：所有定制放在 CodeWhale 的扩展目录中，不修改核心代码
-- **持续更新**：CodeWhale 本体通过 `cargo install` 升级，定制层不受影响
-- **符号链接**：一键部署，修改即生效，无需每次复制
-- **一键启停**：`make start` / `make stop` 管理所有服务
+- **零侵入**：所有定制通过符号链接挂载到 `~/.codewhale/`，不修改 CodeWhale 核心
+- **可插拔**：Skill + MCP 工具按需组合，不同甲方切不同分支
+- **轻量核心**：项目本身只有配置 + Skill + Web 前端，核心能力由 CodeWhale 提供
+- **数据积累**：关键词表和名单越用越准
 
 ## 目录结构
 
 ```
 codewhale-custom/
-├── skills/                        # 自定义 Skill（Markdown，$skill-name 调用）
-│   ├── react-component.md         #   React 组件生成
-│   ├── vue-component.md           #   Vue 组件生成（保留）
-│   ├── tailwind-layout.md         #   Tailwind 响应式布局
-│   └── api-integration.md         #   API 集成代码生成
-├── mcp/                           # MCP 工具服务器配置
-│   └── mcp.json                   #   Playwright / Filesystem
+├── skills/                        # AI Skill（$skill-name 调用）
+│   ├── ccnu-monitor.md            #   华师定制：搜索→甄别→名单匹配→情感分析→报告
+│   ├── social-research.md         #   通用跨平台调研
+│   └── content-monitor.md         #   舆情追踪与定时简报
 ├── memory/                        # 持久化记忆（注入到每次对话）
-│   └── frontend-conventions.md    #   React + TypeScript 技术栈约定
+│   ├── ccnu-conventions.md        #   监控规范、平台优先级、报告标准
+│   └── ccnu-keywords.md           #   关键词映射表（本体词/模糊词/排除词/学院别名）
+├── mcp/                           # MCP 工具服务器配置
+│   └── mcp.json                   #   微博 + 小红书 + Agent-Reach
+├── mcp-servers/                   # MCP 工具本地镜像（离线安装用）
+├── web-workbench/                 # Web 前端工作台（华师品牌）
 ├── scripts/
-│   ├── start.sh                   # 一键启动 serve + Web UI
-│   └── stop.sh                    # 停止所有服务
-├── web-workbench/                 # Web 前端工作台 (React + Vite + Tailwind)
-└── Makefile                       # 命令入口
+│   ├── start.sh                   #   一键启动 serve + Web UI
+│   ├── stop.sh                    #   停止所有服务
+│   └── check-mcp.sh               #   MCP 工具状态检测
+└── Makefile                       #   命令入口
 ```
 
 ---
 
 ## 安装 CodeWhale
 
-> ⚠️ **二选一**：不要同时用 npm 和 Cargo 安装，两个版本会装到不同目录，PATH 靠前的覆盖靠后的。
-> 如果装混了，运行 `which -a codewhale` 查看，用 `npm uninstall -g codewhale` 或 `cargo uninstall codewhale-cli` 清理多余版本。
+> ⚠️ **二选一**：不要同时用 npm 和 Cargo 安装。
 
-### 方案 A：npm（推荐，大部分系统适用）
+### 方案 A：npm（推荐）
 
 ```bash
 npm install -g codewhale@latest
-codewhale --version
 ```
 
-> **要求**：GLIBC ≥ 2.39（Ubuntu 24.04+、macOS、Arch 等）。npm 包只是一个下载器，拉取 GitHub Releases 上的预编译二进制。
+> 要求 GLIBC ≥ 2.39（Ubuntu 24.04+、macOS、Arch 等）。
 
-### 方案 B：Cargo（源码编译，兼容老系统）
+### 方案 B：Cargo（兼容老系统）
 
-适用于 Ubuntu 20.04 / Debian 10 / CentOS 7 等 GLIBC 较旧的系统。
+两个 crate 都必须安装：
 
-> ⚠️ 两个 crate 都必须安装，缺一不可：
->
-> | crate 名 | 安装的二进制 | 角色 |
-> |---|---|---|
-> | `codewhale-cli` | `codewhale` (17MB) | 命令入口 — 解析参数，调 TUI |
-> | `codewhale-tui` | `codewhale-tui` (52MB) | 运行时引擎 — AI 对话、工具调用、serve HTTP 服务的核心 |
->
-> CLI 本身不包含 AI 逻辑，`serve` / `run` / `exec` 等命令内部都通过 `codewhale-tui` 执行。
+| crate 名 | 安装的二进制 | 角色 |
+|---|---|---|
+| `codewhale-cli` | `codewhale` | 命令入口 |
+| `codewhale-tui` | `codewhale-tui` | 运行时引擎 |
 
 ```bash
-# 1. 确保 Rust ≥ 1.88
 rustup update stable
-
-# 2. 源码编译安装（需要 cli + tui 两个包）
 cargo install codewhale-cli codewhale-tui --locked
-
-# 3. 如果 GCC 版本过旧导致 aws-lc-sys 编译失败，换 clang
-CC=clang cargo install codewhale-cli codewhale-tui --locked
 ```
 
 ### 验证
 
 ```bash
-codewhale --version   # 应输出版本号
-codewhale doctor      # 检查整体状态
+codewhale --version
+codewhale doctor
 ```
 
 ---
 
 ## 快速开始
 
-### 1. 部署定制层
+### 1. 下载 MCP 工具到本地
 
 ```bash
-git clone <this-repo> && cd codewhale-custom
+cd mcp-servers
+
+# 微博（无需登录）
+git clone https://github.com/Panniantong/mcp-server-weibo.git
+
+# 小红书（支持扫码登录）
+git clone https://github.com/jackwener/xiaohongshu-cli.git
+
+cd ..
+```
+
+### 2. 一键部署
+
+```bash
 make install
 ```
 
-这会创建符号链接：
-- `skills/*` → `~/.codewhale/skills/`
-- `mcp/mcp.json` → `~/.codewhale/mcp.json`
-- `memory/*.md` → `~/.codewhale/memory.d/*`
+自动完成：MCP 工具安装 → npm 依赖安装 → Skills/MCP/Memory 符号链接。
 
-### 2. 安装 Web Workbench 依赖
+### 3. 小红书登录（如需要）
 
 ```bash
-cd web-workbench && npm install
+xhs login    # 终端显示二维码，小红书 App 扫码
 ```
 
-### 3. 一键启动
+### 4. 启动
 
 ```bash
 make start
 ```
 
-自动完成：
-1. 后台启动 `codewhale serve --http`（端口 7878）
-2. 后台启动 Vite dev server（端口 3000）
-3. **Ctrl+C 自动清理所有进程**
+浏览器打开 `http://localhost:3000`。
 
-也可以独立启停：
+---
 
-```bash
-make stop             # 停止所有服务
-make dev-workbench    # 单独启动 Web UI
+## 程序架构
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    Web 工作台（React）                │
+│         对话 · 历史 · 设置（Cookie/名单）              │
+└──────────────────────┬──────────────────────────────┘
+                       │ HTTP + SSE
+┌──────────────────────▼──────────────────────────────┐
+│              CodeWhale Runtime API                   │
+│              codewhale serve --http                  │
+└──────────────────────┬──────────────────────────────┘
+                       │
+     ┌─────────────────┼─────────────────┐
+     ▼                 ▼                 ▼
+┌──────────┐  ┌──────────────┐  ┌──────────────┐
+│  Skills  │  │   Memory     │  │  MCP Tools   │
+│          │  │              │  │              │
+│ ccnu-    │  │ ccnu-        │  │ 微博（无需登录）│
+│ monitor  │  │ conventions  │  │              │
+│          │  │              │  │ 小红书（扫码） │
+│ social-  │  │ ccnu-        │  │              │
+│ research │  │ keywords     │  │ agent-reach  │
+│          │  │              │  │ （可选）      │
+│ content- │  │              │  │              │
+│ monitor  │  │              │  │              │
+└──────────┘  └──────────────┘  └──────────────┘
+     │                 │                 │
+     └─────────────────┼─────────────────┘
+                       ▼
+              ┌────────────────┐
+              │  AI 模型        │
+              │  deepseek-v4   │
+              └────────────────┘
 ```
 
-自定义配置：
+| 层 | 说明 |
+|---|---|
+| Web 工作台 | 用户交互界面，华师品牌，对话/历史/设置 |
+| CodeWhale Runtime | AI 引擎，提供 HTTP + SSE 接口 |
+| Skills | 定制化的 AI 行为和工作流（Markdown 格式） |
+| Memory | 持久化记忆，每次对话自动注入（关键词表、监控规范） |
+| MCP Tools | 外部工具集成（跨平台搜索），本地安装、离线可用 |
 
-```bash
-CODEWHALE_PORT=9090 WEBBENCH_PORT=4000 CODEWHALE_TOKEN=my-secret make start
+---
+
+## 舆情监控 Skill
+
+| Skill | 命令 | 用途 |
+|---|---|---|
+| 华师监控 | `$ccnu-monitor` | 搜微博+小红书 → 关键词表匹配 → 名单匹配 → 情感分析 → 结构化报告 |
+| 跨平台调研 | `$social-research` | 12 个平台通用调研，输出报告 |
+| 内容追踪 | `$content-monitor` | 定时扫描关键词，生成简报 |
+
+### 使用示例
+
 ```
+$ccnu-monitor 帮我搜一下文学院今天的最新信息
+```
+
+系统自动：
+1. 加载 `ccnu-keywords.md` 关键词表
+2. 构造搜索词（优先精确词：`华中师范大学 文学院`、`桂子山 文院`）
+3. 搜索微博 + 小红书
+4. 甄别结果（过滤华东师范/华南师范等混淆内容）
+5. 匹配上传的名单
+6. 情感分类（正面/中性/负面）
+7. 生成报告（含已剔除内容章节）
+
+---
+
+## MCP 工具
+
+| 工具 | 平台 | 安装源 | 登录 |
+|---|---|---|---|
+| `mcp-server-weibo` | 微博 | `mcp-servers/` 本地安装 | 无需 |
+| `xiaohongshu-cli` | 小红书 | `mcp-servers/` 本地安装 | 扫码 |
+
+新增工具：下载到 `mcp-servers/`，在 `mcp/mcp.json` 添加配置，`make install` 即可。
+
+---
+
+## 关键词表
+
+`memory/ccnu-keywords.md` 是系统的核心数据资产：
+
+| 类别 | 内容 |
+|---|---|
+| 本体词 | 华中师范大学、CCNU、桂子山、南湖校区 |
+| 模糊词 | 华师（需上下文判断） |
+| 排除词 | 上海/闵行→华东师范、广州/石牌→华南师范 |
+| 学院别名 | 25 个学院的正式名称与简称对照 |
+
+每次搜索 AI 自动加载，发现新别名/排除词直接编辑更新即可，越用越准。
+
+---
+
+## 名单管理
+
+在 Web 工作台 **设置 → 名单管理** 页面上传 Excel 文件（.xlsx），表头需含"姓名"列。
+
+搜索到内容中匹配名单姓名时，报告自动标记 **【名单匹配】**。
 
 ---
 
 ## Web 工作台
 
-浏览器打开 `http://localhost:3000`（局域网内其他设备用 `http://<IP>:3000`）。
-
-首次使用在 **Settings** 页面配置：
-- API URL: `http://localhost:7878`
-- Auth Token: `dev-token`（与启动命令一致）
-- 点击 **Test Connection** 验证连通性
-
 ### 功能
 
 | 功能 | 说明 |
 |---|---|
-| Thread 管理 | 创建 / 删除 / 列举对话线程 |
-| SSE 流式对话 | 实时流式输出，Markdown 渲染 |
-| Tool 审批 | 弹出审批面板，可 Approve / Reject |
-| 连接配置 | 可视化配置 API 地址和 Token，支持连通性测试 |
-| 停止生成 | 流式输出中可随时 Stop |
+| 对话 | AI 对话，支持 `/` 命令（`/help`、`/clear`） |
+| 历史 | 对话记录归档、重命名 |
+| 工作流状态 | 实时显示搜索进度（"正在搜索微博..."） |
+| 设置 | API 连接、平台 Cookie、名单上传 |
+| Markdown 渲染 | 表格、代码高亮、代码复制 |
+| 模型切换 | 下拉选择模型 |
 
-### 技术栈
+### 设置页
 
-React 18 · TypeScript 5 · Vite 6 · Tailwind CSS 3 · React Router 6 · Zustand 5
-
----
-
-## 在 TUI 中使用 Skill
-
-```
-$react-component 创建一个用户登录表单，包含邮箱和密码字段
-$tailwind-layout 设计一个三栏管理后台布局
-$api-integration 根据这个 OpenAPI 文档生成前端 API 层
-```
+| 标签 | 内容 |
+|---|---|
+| 服务连接 | API 地址 + 认证令牌 |
+| 平台 Cookie | B站/知乎/Twitter Cookie（微博和小红书不需要这栏） |
+| 名单管理 | Excel 上传 + 名单预览 |
 
 ---
 
@@ -163,63 +240,20 @@ $api-integration 根据这个 OpenAPI 文档生成前端 API 层
 
 | 命令 | 用途 |
 |---|---|
-| `make install` | 部署定制层到 ~/.codewhale/ |
-| `make uninstall` | 移除符号链接（不删文件） |
-| `make status` | 查看部署状态 |
-| `make start` | 一键启动（serve + Web UI） |
+| `make install` | 一键部署（MCP 工具 + npm + 链接配置） |
+| `make start` | 启动 serve + Web UI（Ctrl+C 停止） |
 | `make stop` | 停止所有服务 |
-| `make dev-workbench` | 单独启动 Web UI |
-| `make build-workbench` | 构建 Web UI 生产版本 |
-| `make doctor` | 运行 codewhale doctor |
+| `make status` | 查看部署状态 |
+| `make uninstall` | 移除符号链接 |
 
 ---
-
-## 自定义 Skill 格式
-
-每个 Skill 是一个 Markdown 文件，使用 frontmatter 声明元数据：
-
-```markdown
----
-name: my-skill
-description: 一句话描述这个 Skill 做什么
-allowed-tools: [read_file, write_file, exec_shell]
----
-
-# Skill 标题
-
-## 角色
-你是一个...
-
-## 工作流程
-1. 首先...
-2. 然后...
-
-## 输出规范
-- 组件文件放在 src/components/ 下
-- 使用 TypeScript
-```
-
-参考已有 Skill 文件了解完整格式。
-
-## 添加新 Skill
-
-1. 在 `skills/` 下创建 `xxx.md`
-2. 写 frontmatter + body
-3. `make install`（或手动 `ln -sf $PWD/skills/xxx.md ~/.codewhale/skills/`）
-4. 在 CodeWhale 中用 `$xxx` 调用
 
 ## 更新
 
 ```bash
-cargo install codewhale-cli --locked   # 更新 CodeWhale
-git pull                                # 更新定制层
-make install                            # 重新链接新文件
-```
-
-## 卸载
-
-```bash
-make uninstall    # 移除所有符号链接，不删除文件
+cargo install codewhale-cli codewhale-tui --locked   # 更新 CodeWhale 核心
+git pull                                                # 更新定制层
+make install                                            # 重新链接
 ```
 
 ## 许可

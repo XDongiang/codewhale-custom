@@ -4,9 +4,10 @@ import { getClient } from '../../lib/api/client'
 import { useSettingsStore } from '../../stores/settings-store'
 
 const navItems = [
-  { to: '/', label: 'Chat', icon: '💬', end: true },
-  { to: '/history', label: 'History', icon: '📋' },
-  { to: '/settings', label: 'Settings', icon: '⚙️' },
+  { to: '/', label: '对话', icon: '💬', end: true },
+  { to: '/monitor', label: '舆情监控', icon: '📊' },
+  { to: '/history', label: '历史', icon: '📋' },
+  { to: '/settings', label: '设置', icon: '⚙️' },
 ]
 
 export function Sidebar() {
@@ -31,11 +32,15 @@ export function Sidebar() {
   }, [settings])
 
   return (
-    <aside className="flex h-full w-56 flex-col border-r border-gray-800 bg-gray-900">
+    <aside className="flex h-full w-56 flex-col border-r border-slate-200/10 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950">
       {/* Logo */}
-      <div className="flex h-14 items-center gap-2 border-b border-gray-800 px-4">
-        <span className="text-xl">🐳</span>
-        <span className="text-sm font-semibold text-gray-200">CodeWhale</span>
+      <div className="flex items-center gap-3 border-b border-slate-200/10 px-4 py-4">
+        {/* CCNU Logo */}
+        <img src="/ccnulogo.png" alt="华中师范大学" className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-slate-200/20" />
+        <div className="min-w-0">
+          <h1 className="text-sm font-semibold text-slate-100 tracking-wide">华师 AI 工作台</h1>
+          <p className="text-[10px] text-slate-500">华中师范大学</p>
+        </div>
       </div>
 
       {/* Nav */}
@@ -49,37 +54,40 @@ export function Sidebar() {
             <NavLink
               key={item.to}
               to={item.to}
-              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
+              className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-all duration-200 ${
                 active
-                  ? 'bg-blue-600/20 text-blue-400'
-                  : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                  ? 'bg-blue-600/10 text-blue-400 font-medium shadow-sm shadow-blue-500/5'
+                  : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
               }`}
             >
-              <span>{item.icon}</span>
+              <span className="text-base">{item.icon}</span>
               <span>{item.label}</span>
+              {active && (
+                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-blue-400" />
+              )}
             </NavLink>
           )
         })}
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-gray-800 p-3">
-        <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-gray-500">
+      <div className="border-t border-slate-200/10 p-3">
+        <div className="flex items-center gap-2 rounded-lg px-3 py-2">
           <span
-            className={`inline-block h-2 w-2 rounded-full ${
+            className={`inline-block h-2 w-2 rounded-full transition-colors ${
               apiStatus === 'connected'
-                ? 'bg-green-500'
+                ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50'
                 : apiStatus === 'checking'
-                  ? 'bg-yellow-500 animate-pulse'
-                  : 'bg-red-500'
+                  ? 'bg-amber-400 animate-pulse'
+                  : 'bg-red-400'
             }`}
           />
-          <span>
+          <span className="text-xs text-slate-500">
             {apiStatus === 'connected'
-              ? 'Runtime API connected'
+              ? '服务已连接'
               : apiStatus === 'checking'
-                ? 'Checking...'
-                : 'Runtime API disconnected'}
+                ? '检测中...'
+                : '服务未连接'}
           </span>
         </div>
       </div>

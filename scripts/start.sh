@@ -79,6 +79,10 @@ fi
 # ── 启动 Web Workbench ──
 echo ""
 echo -e "${CYAN}==> Starting Web Workbench...${NC}"
+# 查找 xhs 路径（conda env / 系统）
+XHS_BIN=$(command -v xhs 2>/dev/null || find /home/sean/miniforge3/envs -name xhs -type f 2>/dev/null | head -1 || echo "")
+export XHS_BIN
+
 cd "$WEBBENCH_DIR"
 npx vite --host 0.0.0.0 --port "$WEBBENCH_PORT" &
 WEBBENCH_PID=$!

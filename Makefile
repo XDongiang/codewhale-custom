@@ -8,45 +8,91 @@ CODEWHALE_BIN    := $(shell which codewhale 2>/dev/null || echo "")
 
 # 当前仓库路径（Makefile 所在目录）
 REPO_ROOT        := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+MCP_VENDOR       := $(REPO_ROOT)/mcp-servers
 
 .PHONY: install uninstall status check doctor start stop dev-workbench build-workbench help
 
 SCRIPTS_DIR := $(REPO_ROOT)/scripts
 
-## install: 部署所有定制层到 CodeWhale 扩展目录
+# 华师舆情 MCP 工具列表
+MCP_TOOLS := \
+	mcp-server-weibo:微博:git+https://github.com/Panniantong/mcp-server-weibo.git \
+	xiaohongshu-cli:小红书:pip:none
+
+PIP := $(shell command -v pip 2>/dev/null || command -v pip3 2>/dev/null || which pip 2>/dev/null || echo "")
+
+## install: 一键部署 — MCP 工具 + Skills + MCP 配置 + Memory + Web 工作台
 install: check
-	@echo "==> 创建扩展目录（如不存在）..."
-	mkdir -p $(SKILLS_DIR)
-	mkdir -p $(MEMORY_DIR)
+	@echo "==> 安装 MCP 工具..."
+	@# Find pip (conda/native/python -m pip)
+	@_PIP=""; \
+	for p in pip pip3 "python -m pip" "python3 -m pip"; do \
+		if $$p --version >/dev/null 2>&1; then _PIP="$$p"; break; fi; \
+	done; \
+	if [ -z "$$_PIP" ]; then \
+		echo "    ⚠ 未找到 pip，跳过 MCP 安装"; \
+	else \
+		echo "    pip: $$_PIP"; \
+		MCP_LOCAL="$(MCP_VENDOR)"; \
+		if [ -d "$$MCP_LOCAL/mcp-server-weibo" ]; then \
+			echo "    ✓ 微博 MCP 本地已有"; \
+			$$_PIP install -e "$$MCP_LOCAL/mcp-server-weibo" 2>/dev/null || \
+			$$_PIP install "$$MCP_LOCAL/mcp-server-weibo"; \
+		elif command -v mcp-server-weibo >/dev/null 2>&1; then \
+			echo "    ✓ 微博 MCP 已安装"; \
+		else \
+			echo "    ⚠ 微博 MCP 未安装（需先下载到 mcp-servers/）"; \
+		fi; \
+		if [ -d "$$MCP_LOCAL/xiaohongshu-cli" ]; then \
+			echo "    ✓ 小红书 CLI 本地已有"; \
+			$$_PIP install "$$MCP_LOCAL/xiaohongshu-cli" 2>/dev/null || true; \
+		elif command -v xhs >/dev/null 2>&1; then \
+			echo "    ✓ 小红书 CLI 已安装"; \
+		else \
+			echo "    ⚠ 小红书 CLI 未安装，运行:"; \
+			echo "       cd mcp-servers && git clone https://github.com/jackwener/xiaohongshu-cli.git"; \
+			echo "       支持扫码登录，不需要手动复制 Cookie"; \
+		fi; \
+	fi
+	@# Web Workbench
 	@echo ""
-	@echo "==> 链接 Skills..."
+	@echo "==> Web 工作台..."
+	@if [ -d "$(WEBBENCH_DIR)/node_modules" ]; then \
+		echo "    ✓ 依赖已安装"; \
+	else \
+		echo "    → npm install..."; \
+		cd $(WEBBENCH_DIR) && npm install; \
+		echo "    ✓ 完成"; \
+	fi
+	@echo ""
+	@echo "==> 链接文件..."
+	mkdir -p $(SKILLS_DIR) $(MEMORY_DIR)
 	@for f in $(REPO_ROOT)/skills/*.md; do \
 		if [ -f "$$f" ]; then \
 			name=$$(basename "$$f"); \
 			ln -sf "$$f" "$(SKILLS_DIR)/$$name"; \
-			echo "    $$name → $(SKILLS_DIR)/$$name"; \
+			echo "    skills/$$name → $(SKILLS_DIR)/$$name"; \
 		fi; \
 	done
-	@echo ""
-	@echo "==> 链接 MCP 配置..."
 	@if [ -f "$(REPO_ROOT)/mcp/mcp.json" ]; then \
 		ln -sf "$(REPO_ROOT)/mcp/mcp.json" "$(MCP_CONFIG)"; \
-		echo "    mcp.json → $(MCP_CONFIG)"; \
-	else \
-		echo "    (跳过，mcp/mcp.json 不存在)"; \
+		echo "    mcp/mcp.json → $(MCP_CONFIG)"; \
 	fi
-	@echo ""
-	@echo "==> 链接 Memory 文件..."
 	@for f in $(REPO_ROOT)/memory/*.md; do \
 		if [ -f "$$f" ]; then \
 			name=$$(basename "$$f"); \
 			ln -sf "$$f" "$(MEMORY_DIR)/$$name"; \
-			echo "    $$name → $(MEMORY_DIR)/$$name"; \
+			echo "    memory/$$name → $(MEMORY_DIR)/$$name"; \
 		fi; \
 	done
 	@echo ""
-	@echo "部署完成。运行 'make status' 检查。"
-	@echo "运行 'codewhale doctor' 确认 Skills 已加载。"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "✅ 部署完成。"
+	@if ! command -v xhs >/dev/null 2>&1; then true; else \
+		echo "💡 小红书需登录: xhs login"; \
+	fi
+	@echo "🚀 运行 'make start' 启动"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 ## uninstall: 移除所有符号链接（保留原文件）
 uninstall:
@@ -165,14 +211,13 @@ build-workbench:
 
 ## help: 显示帮助
 help:
-	@echo "CodeWhale Custom 部署工具"
+	@echo "华师 AI 工作台 — 部署工具"
 	@echo ""
-	@echo "  make install          部署到 ~/.codewhale/"
-	@echo "  make uninstall        移除符号链接"
+	@echo "  make install          部署配置（Skills + MCP + Memory）"
+	@echo "  make setup-mcp        自动安装 MCP 工具（微博/小红书）"
+	@echo "  make install-all      一键全部安装（MCP + 部署）"
+	@echo "  make start            启动服务（serve + Web UI）"
+	@echo "  make stop             停止所有服务"
 	@echo "  make status           查看部署状态"
 	@echo "  make doctor           运行 codewhale doctor"
-	@echo "  make start            一键启动 (serve + Web UI)"
-	@echo "  make stop             停止所有服务"
-	@echo "  make dev-workbench    单独启动 Web 工作台"
-	@echo "  make build-workbench  构建 Web 工作台生产版本"
 	@echo ""

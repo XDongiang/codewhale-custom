@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo, memo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -34,7 +34,7 @@ export function ChatView() {
   const latestSeqRef = useRef<number>(0)
   const threadIdRef = useRef<string | null>(id ?? null)
 
-  const client = getClient(settings)
+  const client = useMemo(() => getClient(settings), [settings.apiUrl, settings.authToken])
 
   // Keep ref in sync
   useEffect(() => {
@@ -57,7 +57,7 @@ export function ChatView() {
         chat.setThreadDetail(detail.thread, detail.turns, detail.items)
         latestSeqRef.current = detail.latest_seq
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load thread')
+        setError(err instanceof Error ? err.message : '加载对话失败')
       } finally {
         setLoading(false)
       }
@@ -72,9 +72,19 @@ export function ChatView() {
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Auto-scroll ──
+  // Use instant during streaming to avoid smooth scroll pile-up causing flicker
+  // Batch via requestAnimationFrame to reduce repaints in VSCode webview
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-  }, [chat.items, chat.streamingContent])
+    const el = scrollRef.current
+    if (!el) return
+    const raf = requestAnimationFrame(() => {
+      el.scrollTo({
+        top: el.scrollHeight,
+        behavior: chat.isStreaming ? 'instant' : 'smooth',
+      })
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [chat.items, chat.streamingContent, chat.isStreaming])
 
   // ── Start SSE listener ──
   const startEventStream = useCallback(
@@ -99,11 +109,11 @@ export function ChatView() {
       setCreatingThread(true)
       try {
         // Create thread
-        const thread: ThreadRecord = await client.createThread({ model: selectedModel })
+        const thread: ThreadRecord = await client.createThread({ model: selectedModel, auto_approve: true })
         const newId = thread.id
 
         // Send first turn
-        const req: StartTurnRequest = { prompt: text, model: selectedModel }
+        const req: StartTurnRequest = { prompt: text, model: selectedModel, auto_approve: true }
         const res = await client.startTurn(newId, req)
         chat.startStreaming()
         chat.addTurn(res.turn)
@@ -114,7 +124,7 @@ export function ChatView() {
         startEventStream(newId)
       } catch (err) {
         chat.stopStreaming()
-        setError(err instanceof Error ? err.message : 'Failed to create conversation')
+        setError(err instanceof Error ? err.message : '创建对话失败')
       } finally {
         setCreatingThread(false)
       }
@@ -127,13 +137,13 @@ export function ChatView() {
     async (threadId: string, text: string) => {
       setSending(true)
       try {
-        const req: StartTurnRequest = { prompt: text, model: selectedModel }
+        const req: StartTurnRequest = { prompt: text, model: selectedModel, auto_approve: true }
         const res = await client.startTurn(threadId, req)
         chat.addTurn(res.turn)
         startEventStream(threadId)
       } catch (err) {
         chat.stopStreaming()
-        setError(err instanceof Error ? err.message : 'Failed to send message')
+        setError(err instanceof Error ? err.message : '发送消息失败')
       } finally {
         setSending(false)
       }
@@ -192,7 +202,7 @@ export function ChatView() {
   const threadTitle =
     chat.thread?.title ??
     chat.turns.find((t) => t.input_summary)?.input_summary ??
-    (id ? `Chat ${id.slice(0, 8)}` : 'New Chat')
+    (id ? `对话 ${id.slice(0, 8)}` : '新对话')
 
   const handleStartEditTitle = () => {
     setEditedTitle(threadTitle)
@@ -254,21 +264,21 @@ export function ChatView() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center text-gray-500">
-        Loading...
+      <div className="flex h-full items-center justify-center text-slate-500">
+        加载中...
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 text-gray-400">
+      <div className="flex h-full flex-col items-center justify-center gap-4 text-slate-400">
         <p className="text-red-400">{error}</p>
         <button
           onClick={() => { chat.clear(); navigate('/') }}
-          className="rounded-lg bg-gray-800 px-4 py-2 text-sm hover:bg-gray-700 transition-colors"
+          className="rounded-lg bg-slate-800 px-4 py-2 text-sm hover:bg-slate-700 transition-colors"
         >
-          ← New Chat
+          ← 新对话
         </button>
       </div>
     )
@@ -277,7 +287,7 @@ export function ChatView() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-800 px-6 py-3 shrink-0">
+      <div className="flex items-center justify-between border-b border-slate-800 px-6 py-3 shrink-0">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {editingTitle ? (
             <input
@@ -290,22 +300,22 @@ export function ChatView() {
               }}
               onBlur={() => void handleSaveTitle()}
               disabled={updatingThread}
-              className="flex-1 rounded border border-blue-500 bg-gray-900 px-2 py-1 text-sm text-gray-200 focus:outline-none"
+              className="flex-1 rounded border border-blue-500 bg-slate-900 px-2 py-1 text-sm text-slate-200 focus:outline-none"
               autoFocus
             />
           ) : (
             <h2
-              className="text-sm font-medium text-gray-200 truncate cursor-pointer hover:text-blue-400 transition-colors"
+              className="text-sm font-medium text-slate-200 truncate cursor-pointer hover:text-blue-400 transition-colors"
               onClick={handleStartEditTitle}
-              title="Click to rename"
+              title="点击重命名"
             >
               {threadTitle}
             </h2>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs text-gray-500">
-            {updatingThread ? 'Saving...' : creatingThread ? 'Creating...' : chat.isStreaming ? 'Streaming...' : sending ? 'Sending...' : 'Ready'}
+          <span className="text-xs text-slate-500">
+            {updatingThread ? '保存中...' : creatingThread ? '创建中...' : chat.isStreaming ? '输出中...' : sending ? '发送中...' : '就绪'}
           </span>
           {!id && (
             <ModelSelector
@@ -317,28 +327,57 @@ export function ChatView() {
           {id && (
             <button
               onClick={handleNewChat}
-              className="rounded-lg border border-gray-700 px-3 py-1 text-xs text-gray-400 hover:bg-gray-800 hover:text-gray-200 transition-colors"
+              className="rounded-lg border border-slate-700 px-3 py-1 text-xs text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors"
             >
-              + New
+              + 新建
             </button>
           )}
         </div>
       </div>
 
+      {/* Workflow status */}
+      {chat.workflowSteps.length > 0 && (
+        <div className="border-b border-slate-200/10 bg-slate-900/50 px-6 py-2.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {chat.workflowSteps.map((step) => (
+              <span
+                key={step.id}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                  step.status === 'running'
+                    ? 'bg-blue-600/20 text-blue-400 animate-pulse'
+                    : step.status === 'done'
+                      ? 'bg-emerald-600/10 text-emerald-400'
+                      : step.status === 'error'
+                        ? 'bg-red-600/10 text-red-400'
+                        : 'bg-slate-800 text-slate-500'
+                }`}
+              >
+                {step.status === 'running' && <span className="inline-block w-2 h-2 rounded-full bg-current animate-ping" />}
+                {step.status === 'done' && '✓ '}
+                {step.label}
+                {step.detail && step.status === 'done' && (
+                  <span className="text-slate-500">({step.detail})</span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
         {displayItems.length === 0 && systemMessages.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-600">
-            <span className="text-5xl mb-4">🐳</span>
-            <p className="text-sm">Start a conversation</p>
-            <p className="text-xs text-gray-700 mt-2">Type /help to see commands</p>
+          <div className="flex flex-col items-center justify-center py-20 text-slate-600">
+            <img src="/ccnulogo.png" alt="华师" className="w-16 h-16 mb-4 rounded-full opacity-40" />
+            <p className="text-sm">开始一段新的对话</p>
+            <p className="text-xs text-slate-600 mt-2">输入 /help 查看可用命令</p>
           </div>
         )}
 
         {/* System messages (slash command output) */}
         {systemMessages.map((msg) => (
           <div key={msg.id} className="mb-4 flex justify-center">
-            <div className="max-w-[80%] rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-sm text-gray-400">
+            <div className="max-w-[80%] rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-400">
               <div className="prose-stream">
                 <Markdown content={msg.text} />
               </div>
@@ -349,11 +388,11 @@ export function ChatView() {
         {turnsWithItems.map(({ turn, items }) => (
           <div key={turn.id} className="mb-6">
             <div className="mb-2 flex items-center gap-2">
-              <div className="h-px flex-1 bg-gray-800" />
-              <span className="text-xs text-gray-600">
+              <div className="h-px flex-1 bg-slate-800" />
+              <span className="text-xs text-slate-600">
                 {turn.input_summary || new Date(turn.created_at).toLocaleTimeString()}
               </span>
-              <div className="h-px flex-1 bg-gray-800" />
+              <div className="h-px flex-1 bg-slate-800" />
             </div>
             {items.map((item) => (
               <ChatItem
@@ -385,7 +424,7 @@ export function ChatView() {
       </div>
 
       {/* Input */}
-      <div className="border-t border-gray-800 shrink-0">
+      <div className="border-t border-slate-800 shrink-0">
         {/* Command hints */}
         {commandHints.length > 0 && (
           <div className="px-6 pt-2">
@@ -397,7 +436,7 @@ export function ChatView() {
                     setInput(`/${cmd.name} `)
                     inputRef.current?.focus()
                   }}
-                  className="rounded-md border border-gray-700 bg-gray-900 px-2 py-1 text-xs text-gray-400 hover:border-blue-600 hover:text-blue-400 transition-colors"
+                  className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-400 hover:border-blue-600 hover:text-blue-400 transition-colors"
                   title={cmd.description}
                 >
                   /{cmd.name}
@@ -421,27 +460,27 @@ export function ChatView() {
             }}
             placeholder={
               creatingThread
-                ? 'Creating conversation...'
+                ? '正在创建对话...'
                 : chat.isStreaming
-                  ? 'Waiting for response...'
-                  : 'Type a message... (/ for commands, Enter to send)'
+                  ? '等待回复...'
+                  : '输入消息...（Enter 发送，/ 查看命令）'
             }
             disabled={chat.isStreaming || creatingThread}
-            className="flex-1 rounded-xl border border-gray-700 bg-gray-900 px-4 py-2.5 text-sm text-gray-200 placeholder-gray-500 focus:border-blue-500 focus:outline-none disabled:opacity-50"
+            className="flex-1 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-slate-200 placeholder-gray-500 focus:border-blue-500 focus:outline-none disabled:opacity-50"
           />
           <button
             onClick={() => void handleSend()}
             disabled={chat.isStreaming || creatingThread || !input.trim()}
             className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
-            Send
+            发送
           </button>
           {chat.isStreaming && (
             <button
               onClick={disconnect}
               className="rounded-xl bg-red-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-600 transition-colors"
             >
-              Stop
+              停止
             </button>
           )}
         </div>
@@ -450,8 +489,8 @@ export function ChatView() {
   )
 }
 
-// ── Individual Chat Item ──
-function ChatItem({
+// ── Individual Chat Item (memoized to avoid re-render flicker) ──
+const ChatItem = memo(function ChatItem({
   item,
   isStreaming,
   streamingContent,
@@ -476,7 +515,7 @@ function ChatItem({
       return (
         <div className="mb-4 flex justify-start">
           <div
-            className={`max-w-[80%] rounded-2xl bg-gray-800 px-4 py-3 text-sm text-gray-200 ${
+            className={`max-w-[80%] rounded-2xl bg-slate-800 px-4 py-3 text-sm text-slate-200 ${
               isStreaming ? 'cursor-blink' : ''
             }`}
           >
@@ -490,9 +529,9 @@ function ChatItem({
     case 'agent_reasoning':
       return (
         <div className="mb-4 flex justify-start">
-          <div className="max-w-[80%] rounded-2xl border border-gray-700 bg-gray-900/50 px-4 py-3 text-sm text-gray-400 italic">
+          <div className="max-w-[80%] rounded-2xl border border-slate-700 bg-slate-900/50 px-4 py-3 text-sm text-slate-400 italic">
             <details>
-              <summary className="cursor-pointer text-xs text-gray-500">🤔 Reasoning</summary>
+              <summary className="cursor-pointer text-xs text-slate-500">🤔 Reasoning</summary>
               <div className="mt-2 whitespace-pre-wrap">{content}</div>
             </details>
           </div>
@@ -505,8 +544,8 @@ function ChatItem({
     case 'error':
       return (
         <div className="mb-4 flex justify-start">
-          <div className="max-w-[80%] rounded-xl border border-red-800 bg-red-900/30 px-4 py-3 text-sm text-red-300">
-            ❌ {content || 'An error occurred'}
+          <div className="max-w-[80%] rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
+            ❌ {content || '发生错误'}
           </div>
         </div>
       )
@@ -517,7 +556,7 @@ function ChatItem({
     case 'status':
       return (
         <div className="mb-2 flex justify-center">
-          <span className="text-xs text-gray-600">
+          <span className="text-xs text-slate-600">
             {item.summary || item.kind}
             {item.detail && `: ${item.detail.slice(0, 100)}`}
           </span>
@@ -527,13 +566,13 @@ function ChatItem({
     default:
       return (
         <div className="mb-4 flex justify-start">
-          <div className="max-w-[80%] rounded-2xl bg-gray-800 px-4 py-3 text-sm text-gray-400">
+          <div className="max-w-[80%] rounded-2xl bg-slate-800 px-4 py-3 text-sm text-slate-400">
             <pre className="whitespace-pre-wrap text-xs">{JSON.stringify(item, null, 2)}</pre>
           </div>
         </div>
       )
   }
-}
+})
 
 // ── Tool Call Item (with approval) ──
 function ToolCallItem({ item }: { item: TurnItemRecord }) {
@@ -551,7 +590,7 @@ function ToolCallItem({ item }: { item: TurnItemRecord }) {
       await getClient().approve(item.id)
       setApprovalState('approved')
     } catch (err) {
-      setApprovalError(err instanceof Error ? err.message : 'Failed')
+      setApprovalError(err instanceof Error ? err.message : '操作失败')
       setApprovalState('pending')
     }
   }
@@ -563,7 +602,7 @@ function ToolCallItem({ item }: { item: TurnItemRecord }) {
       await getClient().reject(item.id)
       setApprovalState('rejected')
     } catch (err) {
-      setApprovalError(err instanceof Error ? err.message : 'Failed')
+      setApprovalError(err instanceof Error ? err.message : '操作失败')
       setApprovalState('pending')
     }
   }
@@ -571,25 +610,25 @@ function ToolCallItem({ item }: { item: TurnItemRecord }) {
   return (
     <div className="mb-4 flex justify-start">
       <div className="max-w-[80%] rounded-xl border border-yellow-800 bg-yellow-900/20 px-4 py-3 text-sm">
-        <p className="text-xs font-medium text-yellow-400">🛠 Tool Call</p>
-        <p className="mt-1 text-gray-300">{item.summary}</p>
+        <p className="text-xs font-medium text-yellow-400">🛠 工具调用</p>
+        <p className="mt-1 text-slate-300">{item.summary}</p>
         {item.detail && (
-          <pre className="mt-1 max-h-24 overflow-auto text-xs text-gray-500">
+          <pre className="mt-1 max-h-24 overflow-auto text-xs text-slate-500">
             {item.detail}
           </pre>
         )}
 
         {/* Status */}
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-slate-500">
           {item.status === 'completed'
-            ? '✓ Completed'
+            ? '✓ 已完成'
             : item.status === 'failed'
-              ? '✗ Failed'
+              ? '✗ 失败'
               : effectiveStatus === 'approved'
-                ? '✓ Approved'
+                ? '✓ 已批准'
                 : effectiveStatus === 'rejected'
-                  ? '✗ Rejected'
-                  : 'Waiting for approval...'}
+                  ? '✗ 已拒绝'
+                  : '等待审批...'}
         </p>
 
         {/* Approval buttons */}
@@ -598,16 +637,16 @@ function ToolCallItem({ item }: { item: TurnItemRecord }) {
             <button
               onClick={handleApprove}
               disabled={approvalState === 'approving'}
-              className="rounded-lg bg-green-700 px-3 py-1 text-xs font-medium text-white hover:bg-green-600 disabled:opacity-50 transition-colors"
+              className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50 transition-colors"
             >
-              {approvalState === 'approving' ? '...' : '✓ Approve'}
+              {approvalState === 'approving' ? '...' : '✓ 批准'}
             </button>
             <button
               onClick={handleReject}
               disabled={approvalState === 'approving'}
-              className="rounded-lg bg-red-700 px-3 py-1 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+              className="rounded-lg bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-50 transition-colors"
             >
-              ✗ Reject
+              ✗ 拒绝
             </button>
           </div>
         )}
@@ -620,21 +659,21 @@ function ToolCallItem({ item }: { item: TurnItemRecord }) {
   )
 }
 
-// ── Markdown Renderer ──
-function Markdown({ content }: { content: string }) {
+// ── Markdown Renderer (memoized to reduce re-renders during streaming) ──
+const Markdown = memo(function Markdown({ content }: { content: string }) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
         pre({ children }) {
-          return <pre className="my-2 overflow-x-auto rounded-lg bg-gray-900 p-4 text-sm">{children}</pre>
+          return <pre className="my-2 overflow-x-auto rounded-lg bg-slate-900 p-4 text-sm">{children}</pre>
         },
         code({ className, children, ...props }) {
           // Inline code (not in a pre block)
           const isInline = !className
           if (isInline) {
             return (
-              <code className="rounded bg-gray-800 px-1 py-0.5 text-sm font-mono text-emerald-400" {...props}>
+              <code className="rounded bg-slate-800 px-1 py-0.5 text-sm font-mono text-emerald-400" {...props}>
                 {children}
               </code>
             )
@@ -643,7 +682,7 @@ function Markdown({ content }: { content: string }) {
           return (
             <div className="group relative">
               <CopyButton text={String(children)} />
-              <code className={`${className} text-gray-200`} {...props}>
+              <code className={`${className} text-slate-200`} {...props}>
                 {children}
               </code>
             </div>
@@ -662,23 +701,23 @@ function Markdown({ content }: { content: string }) {
           return <li className="mb-1">{children}</li>
         },
         table({ children }) {
-          return <div className="my-2 overflow-x-auto"><table className="min-w-full border-collapse border border-gray-700 text-sm">{children}</table></div>
+          return <div className="my-2 overflow-x-auto"><table className="min-w-full border-collapse border border-slate-700 text-sm">{children}</table></div>
         },
         th({ children }) {
-          return <th className="border border-gray-700 bg-gray-900 px-3 py-1.5 text-left font-medium">{children}</th>
+          return <th className="border border-slate-700 bg-slate-900 px-3 py-1.5 text-left font-medium">{children}</th>
         },
         td({ children }) {
-          return <td className="border border-gray-700 px-3 py-1.5">{children}</td>
+          return <td className="border border-slate-700 px-3 py-1.5">{children}</td>
         },
         blockquote({ children }) {
-          return <blockquote className="my-2 border-l-2 border-gray-600 pl-3 italic text-gray-400">{children}</blockquote>
+          return <blockquote className="my-2 border-l-2 border-slate-600 pl-3 italic text-slate-400">{children}</blockquote>
         },
       }}
     >
       {content}
     </ReactMarkdown>
   )
-}
+})
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
@@ -690,9 +729,9 @@ function CopyButton({ text }: { text: string }) {
           setTimeout(() => setCopied(false), 2000)
         })
       }}
-      className="absolute right-2 top-2 rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-gray-600 hover:text-white"
+      className="absolute right-2 top-2 rounded bg-slate-700 px-2 py-0.5 text-xs text-slate-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-slate-600 hover:text-white"
     >
-      {copied ? '✓ Copied' : '📋'}
+      {copied ? '✓ 已复制' : '📋'}
     </button>
   )
 }
