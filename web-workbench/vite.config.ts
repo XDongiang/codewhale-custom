@@ -55,6 +55,7 @@ function xhsApiPlugin(): Plugin {
         const sendResponse = () => {
           if (responded) return
           responded = true
+          clearTimeout(qrDetectTimer)
           clearTimeout(qrTimeout)
           if (!res.headersSent) {
             res.end(JSON.stringify({
@@ -67,7 +68,7 @@ function xhsApiPlugin(): Plugin {
         // Send QR code as soon as detected, or fall back after 10s
         const qrDetectTimer = setTimeout(() => {
           if (!responded) sendResponse()
-        }, 10000) // 10s — should be enough for browser + QR render
+        }, 30000) // Allow slower ARM hosts to finish browser startup and QR rendering
 
         const qrTimeout = setTimeout(() => {
           sendResponse()
