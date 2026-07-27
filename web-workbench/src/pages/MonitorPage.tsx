@@ -3,15 +3,18 @@ import { useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { getClient } from '../lib/api/client'
-import { withMonitorNameList } from '../lib/monitor-prompt'
+import { buildMonitorPrompt } from '../lib/monitor-prompt'
+import { DEPARTMENTS } from '../lib/departments'
 import { useSettingsStore } from '../stores/settings-store'
+import type { ReportLevel } from '../types'
 
-const DEPARTMENTS = [
-  '文学院', '数学与统计学学院', '物理科学与技术学院', '化学学院',
-  '生命科学学院', '计算机学院', '教育学院', '心理学院',
-  '马克思主义学院', '历史文化学院', '外国语学院', '经济与工商管理学院',
-  '法学院', '新闻传播学院', '音乐学院', '美术学院', '体育学院',
-  '信息管理学院', '公共管理学院', '城市与环境科学学院', '国际文化交流学院',
+const REPORT_LEVELS: { key: ReportLevel; label: string; desc: string }[] = [
+  { key: 'school', label: '全校', desc: '汇总全部学院' },
+  { key: 'college', label: '学院', desc: '搜索指定学院' },
+  { key: 'department', label: '专业/系部', desc: '搜索指定专业' },
+  { key: 'class', label: '班级', desc: '搜索指定班级' },
+  { key: 'course', label: '课程', desc: '搜索指定课程' },
+  { key: 'individual', label: '个人', desc: '搜索指定人员' },
 ]
 
 const TIME_RANGES = [
@@ -27,15 +30,27 @@ interface SavedReport {
   content: string
   createdAt: string
   threadId: string
+  level: ReportLevel
+  personName?: string
 }
 
-const REPORTS_KEY = 'ccnu-monitor-reports'
+const REPORTS_KEY = 'ccnu-monitor-reports-v2'
 const REPORT_MAIL_KEY = 'ccnu-monitor-report-mail'
 
 function loadReports(): SavedReport[] {
   try {
-    return JSON.parse(localStorage.getItem(REPORTS_KEY) || '[]')
+    const raw = localStorage.getItem(REPORTS_KEY)
+    if (raw) return JSON.parse(raw) as SavedReport[]
+    // Migrate old reports
+    const old = localStorage.getItem('ccnu-monitor-reports')
+    if (old) {
+      const oldReports = JSON.parse(old) as SavedReport[]
+      const migrated = oldReports.map(r => ({ ...r, level: (r.level || 'college') as ReportLevel }))
+      localStorage.setItem(REPORTS_KEY, JSON.stringify(migrated))
+      return migrated
+    }
   } catch { return [] }
+  return []
 }
 function saveReports(reports: SavedReport[]) {
   localStorage.setItem(REPORTS_KEY, JSON.stringify(reports))
@@ -64,13 +79,28 @@ interface PendingMail {
   expiresIn?: number
 }
 
+const LEVEL_BADGE: Record<ReportLevel, { bg: string; text: string; label: string }> = {
+  school: { bg: 'bg-purple-500/10', text: 'text-purple-400', label: '校级' },
+  college: { bg: 'bg-blue-500/10', text: 'text-blue-400', label: '学院' },
+  department: { bg: 'bg-teal-500/10', text: 'text-teal-400', label: '专业' },
+  class: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', label: '班级' },
+  course: { bg: 'bg-rose-500/10', text: 'text-rose-400', label: '课程' },
+  individual: { bg: 'bg-amber-500/10', text: 'text-amber-400', label: '个人' },
+}
+
 export function MonitorPage() {
   const navigate = useNavigate()
   const settings = useSettingsStore()
-  const [dept, setDept] = useState(DEPARTMENTS[0])
+  const [reportLevel, setReportLevel] = useState<ReportLevel>('college')
+  const [dept, setDept] = useState<string>(DEPARTMENTS[0])
   const [timeRange, setTimeRange] = useState('最近三天')
   const [customDept, setCustomDept] = useState(false)
   const [deptInput, setDeptInput] = useState('')
+  const [selectedPersonId, setSelectedPersonId] = useState('')
+  const [personSearch, setPersonSearch] = useState('')
+  const [deptScope, setDeptScope] = useState('')     // department/major name
+  const [classScope, setClassScope] = useState('')    // class name
+  const [courseScope, setCourseScope] = useState('')  // course name
   const [running, setRunning] = useState(false)
   const [report, setReport] = useState('')
   const [error, setError] = useState('')
@@ -84,9 +114,36 @@ export function MonitorPage() {
   const [mailSending, setMailSending] = useState(false)
   const [pendingMail, setPendingMail] = useState<PendingMail | null>(null)
 
+  // Computed values
   const targetDept = customDept ? deptInput.trim() : dept
-  const canRun = !!targetDept && !running
+  const canRun = (reportLevel === 'school') ? !running
+    : (reportLevel === 'individual') ? !!selectedPersonId && !running
+    : (reportLevel === 'department') ? !!deptScope.trim() && !running
+    : (reportLevel === 'class') ? !!classScope.trim() && !running
+    : (reportLevel === 'course') ? !!courseScope.trim() && !running
+    : !!targetDept && !running
   const normalizedRecipient = recipientEmail.trim()
+
+  // Filtered personnel for person selector
+  const allPersonnel = settings.personnel
+  const filteredPersons = allPersonnel.filter(p => {
+    if (!personSearch) return true
+    const q = personSearch.toLowerCase()
+    return p.name.toLowerCase().includes(q) ||
+      (p.college || '').toLowerCase().includes(q) ||
+      (p.role || '').toLowerCase().includes(q)
+  })
+
+  const selectedPerson = allPersonnel.find(p => p.id === selectedPersonId)
+
+  const getReportLabel = () => {
+    if (reportLevel === 'school') return `全校 · ${timeRange}`
+    if (reportLevel === 'individual') return `${selectedPerson?.name || '个人'} · ${timeRange}`
+    if (reportLevel === 'department') return `${deptScope} · ${timeRange}`
+    if (reportLevel === 'class') return `${classScope} · ${timeRange}`
+    if (reportLevel === 'course') return `${courseScope} · ${timeRange}`
+    return `${targetDept} · ${timeRange}`
+  }
 
   const sendReportMail = useCallback(async (reportToSend: SavedReport, confirmationToken?: string) => {
     const recipient = normalizedRecipient
@@ -154,7 +211,12 @@ export function MonitorPage() {
   }
 
   const handleRun = useCallback(async () => {
-    if (!targetDept || runningRef.current) return
+    if (runningRef.current) return
+
+    // Validate
+    if (reportLevel === 'college' && !targetDept) return
+    if (reportLevel === 'individual' && !selectedPersonId) return
+
     const runId = ++runIdRef.current
     runningRef.current = true
     setRunning(true)
@@ -164,12 +226,25 @@ export function MonitorPage() {
     const client = getClient(settings)
 
     try {
+      const scope = reportLevel === 'school' ? ''
+        : reportLevel === 'individual' ? (selectedPerson?.name || '')
+        : reportLevel === 'department' ? deptScope.trim()
+        : reportLevel === 'class' ? classScope.trim()
+        : reportLevel === 'course' ? courseScope.trim()
+        : targetDept
+
+      const { prompt, inputSummary } = buildMonitorPrompt({
+        level: reportLevel,
+        scope,
+        timeRange,
+        personnel: {
+          version: 1,
+          updatedAt: new Date().toISOString(),
+          entries: settings.personnel,
+        },
+      })
+
       const thread = await client.createThread({ model: 'deepseek-v4-pro', auto_approve: true })
-      const inputSummary = `$ccnu-monitor 搜索${timeRange}华中师范大学${targetDept}的最新信息`
-      const prompt = withMonitorNameList(
-        `${inputSummary}。用微博搜索和小红书搜索。最终输出完整报告，不要省略。`,
-        settings.nameList,
-      )
       await client.startTurn(thread.id, { prompt, input_summary: inputSummary, auto_approve: true })
 
       // Poll thread until turn completes
@@ -189,14 +264,15 @@ export function MonitorPage() {
             const reportText = agentItems.map((item: any) => item.detail || item.summary).join('\n\n')
             setReport(reportText)
 
-            // Save to localStorage
             const newReport: SavedReport = {
               id: thread.id,
-              dept: targetDept,
+              dept: getReportLabel(),
               timeRange,
               content: reportText,
               createdAt: new Date().toISOString(),
               threadId: thread.id,
+              level: reportLevel,
+              personName: reportLevel === 'individual' ? selectedPerson?.name : undefined,
             }
             const updated = [newReport, ...savedReports].slice(0, 50)
             setSavedReports(updated)
@@ -221,8 +297,10 @@ export function MonitorPage() {
         if (text) {
           setReport(text)
           const newReport: SavedReport = {
-            id: thread.id, dept: targetDept, timeRange,
+            id: thread.id, dept: getReportLabel(), timeRange,
             content: text, createdAt: new Date().toISOString(), threadId: thread.id,
+            level: reportLevel,
+            personName: reportLevel === 'individual' ? selectedPerson?.name : undefined,
           }
           const updated = [newReport, ...savedReports].slice(0, 50)
           setSavedReports(updated)
@@ -244,7 +322,7 @@ export function MonitorPage() {
         runningRef.current = false
       }
     }
-  }, [targetDept, timeRange, settings, savedReports, sendReportMail])
+  }, [reportLevel, targetDept, timeRange, settings, savedReports, selectedPersonId, selectedPerson, sendReportMail])
 
   const handleStop = () => {
     runIdRef.current += 1
@@ -272,27 +350,134 @@ export function MonitorPage() {
 
       {/* Controls */}
       <div className="border-b border-slate-200/10 px-6 py-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="mb-1 block text-xs text-slate-500">学院/部门</label>
-            {customDept ? (
-              <div className="flex gap-2">
-                <input type="text" value={deptInput} onChange={e => setDeptInput(e.target.value)}
-                  placeholder="输入名称" disabled={running}
-                  className="w-44 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none disabled:opacity-50" autoFocus />
-                <button onClick={() => setCustomDept(false)} className="text-xs text-slate-500 hover:text-slate-300">列表</button>
-              </div>
-            ) : (
-              <div className="flex gap-2 items-center">
-                <select value={dept} onChange={e => setDept(e.target.value)} disabled={running}
-                  className="w-44 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-blue-500 focus:outline-none disabled:opacity-50">
-                  {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-                <button onClick={() => { setCustomDept(true); setDeptInput('') }} className="text-xs text-slate-500 hover:text-slate-300">自定义</button>
-              </div>
-            )}
+        {/* Report level selector */}
+        <div className="mb-3">
+          <label className="mb-1.5 block text-xs text-slate-500">报告层级</label>
+          <div className="flex gap-1">
+            {REPORT_LEVELS.map(rl => (
+              <button key={rl.key} onClick={() => setReportLevel(rl.key)} disabled={running}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  reportLevel === rl.key
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                } disabled:opacity-50`}>
+                {rl.label}
+                <span className="ml-1 text-xs opacity-60">{rl.desc}</span>
+              </button>
+            ))}
           </div>
+        </div>
 
+        {/* Scope selector (depends on level) */}
+        <div className="flex flex-wrap items-end gap-3">
+          {/* College level: department selector */}
+          {reportLevel === 'college' && (
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">学院/部门</label>
+              {customDept ? (
+                <div className="flex gap-2">
+                  <input type="text" value={deptInput} onChange={e => setDeptInput(e.target.value)}
+                    placeholder="输入名称" disabled={running}
+                    className="w-44 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none disabled:opacity-50" autoFocus />
+                  <button onClick={() => setCustomDept(false)} className="text-xs text-slate-500 hover:text-slate-300">列表</button>
+                </div>
+              ) : (
+                <div className="flex gap-2 items-center">
+                  <select value={dept} onChange={e => setDept(e.target.value)} disabled={running}
+                    className="w-44 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-blue-500 focus:outline-none disabled:opacity-50">
+                    {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                  <button onClick={() => { setCustomDept(true); setDeptInput('') }} className="text-xs text-slate-500 hover:text-slate-300">自定义</button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* School level: info */}
+          {reportLevel === 'school' && (
+            <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 px-4 py-2 text-sm text-slate-300">
+              覆盖全校 {DEPARTMENTS.length} 个学院/部门
+              {settings.personnel.filter(p => p.level === 'school').length > 0 && (
+                <span className="ml-2 text-purple-400">
+                  · 校级名单 {settings.personnel.filter(p => p.level === 'school').length} 人
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Department level: text input */}
+          {reportLevel === 'department' && (
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">专业/系部名称</label>
+              <input type="text" value={deptScope} onChange={e => setDeptScope(e.target.value)}
+                placeholder="如：汉语言文学、计算机科学系"
+                disabled={running}
+                className="w-56 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none disabled:opacity-50" />
+              <p className="mt-1 text-xs text-slate-600">输入具体专业或系部名称</p>
+            </div>
+          )}
+
+          {/* Class level: text input */}
+          {reportLevel === 'class' && (
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">班级名称</label>
+              <input type="text" value={classScope} onChange={e => setClassScope(e.target.value)}
+                placeholder="如：2024级汉语言文学1班"
+                disabled={running}
+                className="w-56 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none disabled:opacity-50" />
+              <p className="mt-1 text-xs text-slate-600">输入具体班级名称</p>
+            </div>
+          )}
+
+          {/* Course level: text input */}
+          {reportLevel === 'course' && (
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">课程名称</label>
+              <input type="text" value={courseScope} onChange={e => setCourseScope(e.target.value)}
+                placeholder="如：高等数学、大学英语"
+                disabled={running}
+                className="w-56 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none disabled:opacity-50" />
+              <p className="mt-1 text-xs text-slate-600">输入课程名，系统将搜索该课程的舆情</p>
+            </div>
+          )}
+
+          {/* Individual level: person selector */}
+          {reportLevel === 'individual' && (
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">选择监控对象</label>
+              {allPersonnel.length === 0 ? (
+                <p className="text-sm text-slate-600">请先在设置 → 人员名单中添加人员</p>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  <input type="text" value={personSearch} onChange={e => { setPersonSearch(e.target.value); setSelectedPersonId('') }}
+                    placeholder="搜索姓名、学院、职务..."
+                    disabled={running}
+                    className="w-56 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none disabled:opacity-50" />
+                  <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-700/50 bg-slate-900/50">
+                    {filteredPersons.slice(0, 30).map(p => (
+                      <button key={p.id}
+                        onClick={() => { setSelectedPersonId(p.id); setPersonSearch(p.name) }}
+                        className={`w-full px-3 py-1.5 text-left text-sm transition-colors ${
+                          selectedPersonId === p.id
+                            ? 'bg-blue-600/20 text-blue-300'
+                            : 'text-slate-300 hover:bg-slate-800'
+                        }`}>
+                        <span className="font-medium">{p.name}</span>
+                        {p.college && <span className="ml-1.5 text-xs text-slate-500">{p.college}</span>}
+                        {p.role && <span className="ml-1.5 text-xs text-slate-500">{p.role}</span>}
+                        <span className={`ml-1.5 text-xs ${LEVEL_BADGE[p.level].text}`}>({LEVEL_BADGE[p.level].label})</span>
+                      </button>
+                    ))}
+                    {filteredPersons.length === 0 && personSearch && (
+                      <p className="px-3 py-2 text-xs text-slate-600">无匹配人员</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Time range (shared) */}
           <div>
             <label className="mb-1 block text-xs text-slate-500">时间范围</label>
             <div className="flex gap-1">
@@ -314,7 +499,15 @@ export function MonitorPage() {
               className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-400 hover:bg-red-500/20 transition-colors">停止</button>
           )}
         </div>
-        {targetDept && <p className="mt-2 text-xs text-slate-600">将对 <span className="text-slate-400">{targetDept}</span> 进行{timeRange}舆情监控</p>}
+
+        {/* Summary line */}
+        {reportLevel !== 'school' && !running && (
+          <p className="mt-2 text-xs text-slate-600">
+            将对 <span className="text-slate-400">{getReportLabel()}</span> 进行舆情监控
+          </p>
+        )}
+
+        {/* Email recipient */}
         <div className="mt-4 max-w-xl rounded-lg border border-slate-700/70 bg-slate-900/50 p-3">
           <label className="mb-1.5 block text-xs font-medium text-slate-400">报告收件邮箱（可选）</label>
           <input type="email" value={recipientEmail} onChange={e => handleRecipientChange(e.target.value)}
@@ -386,43 +579,51 @@ export function MonitorPage() {
         {savedReports.length > 0 && (
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-slate-300">历史报告</h3>
-            {savedReports.map((r) => (
-              <div key={r.id} className="rounded-xl border border-slate-200/10 bg-slate-900/30 overflow-hidden">
-                {/* Card header */}
-                <button
-                  onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-800/30 transition-colors text-left"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm text-slate-300 font-medium truncate">
-                      {r.dept} · {r.timeRange}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {new Date(r.createdAt).toLocaleString('zh-CN')}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0 ml-2">
-                    <button onClick={(e) => { e.stopPropagation(); navigate(`/chat/${r.threadId}`) }}
-                      className="text-xs text-slate-600 hover:text-blue-400 px-2 py-1 rounded transition-colors"
-                      title="查看原始对话">💬</button>
-                    <button onClick={(e) => { e.stopPropagation(); void sendReportMail(r) }}
-                      disabled={!normalizedRecipient || mailSending}
-                      className="text-xs text-slate-600 hover:text-emerald-400 disabled:opacity-30 px-2 py-1 rounded transition-colors"
-                      title="发送到收件邮箱">✉️</button>
-                    <button onClick={(e) => { e.stopPropagation(); deleteReport(r.id) }}
-                      className="text-xs text-slate-600 hover:text-red-400 px-2 py-1 rounded transition-colors"
-                      title="删除">🗑️</button>
-                    <span className="text-xs text-slate-600">{expandedId === r.id ? '▲' : '▼'}</span>
-                  </div>
-                </button>
-                {/* Expanded content */}
-                {expandedId === r.id && (
-                  <div className="border-t border-slate-200/10 px-4 py-4 prose-stream text-sm text-slate-300">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{r.content}</ReactMarkdown>
-                  </div>
-                )}
-              </div>
-            ))}
+            {savedReports.map((r) => {
+              const badge = LEVEL_BADGE[r.level] || LEVEL_BADGE.college
+              return (
+                <div key={r.id} className="rounded-xl border border-slate-200/10 bg-slate-900/30 overflow-hidden">
+                  {/* Card header */}
+                  <button
+                    onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-800/30 transition-colors text-left"
+                  >
+                    <div className="min-w-0 flex items-center gap-2">
+                      <span className={`inline-block rounded-md border px-1.5 py-0.5 text-xs font-medium ${badge.bg} ${badge.text} border-current/20`}>
+                        {badge.label}
+                      </span>
+                      <div>
+                        <p className="text-sm text-slate-300 font-medium truncate">
+                          {r.dept}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {new Date(r.createdAt).toLocaleString('zh-CN')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <button onClick={(e) => { e.stopPropagation(); navigate(`/chat/${r.threadId}`) }}
+                        className="text-xs text-slate-600 hover:text-blue-400 px-2 py-1 rounded transition-colors"
+                        title="查看原始对话">💬</button>
+                      <button onClick={(e) => { e.stopPropagation(); void sendReportMail(r) }}
+                        disabled={!normalizedRecipient || mailSending}
+                        className="text-xs text-slate-600 hover:text-emerald-400 disabled:opacity-30 px-2 py-1 rounded transition-colors"
+                        title="发送到收件邮箱">✉️</button>
+                      <button onClick={(e) => { e.stopPropagation(); deleteReport(r.id) }}
+                        className="text-xs text-slate-600 hover:text-red-400 px-2 py-1 rounded transition-colors"
+                        title="删除">🗑️</button>
+                      <span className="text-xs text-slate-600">{expandedId === r.id ? '▲' : '▼'}</span>
+                    </div>
+                  </button>
+                  {/* Expanded content */}
+                  {expandedId === r.id && (
+                    <div className="border-t border-slate-200/10 px-4 py-4 prose-stream text-sm text-slate-300">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{r.content}</ReactMarkdown>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
 
@@ -430,7 +631,7 @@ export function MonitorPage() {
         {!running && !error && !report && savedReports.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-slate-600">
             <span className="text-4xl mb-3">📊</span>
-            <p className="text-sm">选择学院和时间，点击「开始监控」</p>
+            <p className="text-sm">选择报告层级和参数，点击「开始监控」</p>
           </div>
         )}
       </div>

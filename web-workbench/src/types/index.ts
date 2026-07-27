@@ -160,3 +160,45 @@ export interface AppSettings {
   apiUrl: string
   authToken: string
 }
+
+// ── Personnel (结构化人员库) ──
+export type PersonnelLevel = 'school' | 'college' | 'department' | 'class' | 'course' | 'individual'
+export type ReportLevel = 'school' | 'college' | 'department' | 'class' | 'course' | 'individual'
+
+export const PERSON_CATEGORIES = [
+  '校领导',
+  '职能部门负责人',
+  '院领导',
+  '系主任',
+  '专业负责人',
+  '教授',
+  '副教授',
+  '讲师',
+  '辅导员',
+  '行政人员',
+  '学生',
+  '课程',
+  '其他',
+] as const
+
+export type PersonCategory = (typeof PERSON_CATEGORIES)[number]
+
+export interface PersonEntry {
+  id: string                      // crypto.randomUUID() or person-{ts}-{rand}
+  name: string                    // 必填
+  level: PersonnelLevel           // school / college / individual
+  category: string                // PersonCategory or custom
+  college?: string                // 所属学院
+  department?: string             // 系/部门
+  role?: string                   // 具体职务
+  tags?: string[]
+  notes?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PersonnelDB {
+  version: number
+  updatedAt: string               // ISO timestamp
+  entries: PersonEntry[]
+}

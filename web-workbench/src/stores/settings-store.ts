@@ -1,10 +1,12 @@
 import { create } from 'zustand'
-import type { AppSettings } from '../types'
+import type { AppSettings, PersonEntry, PersonnelLevel } from '../types'
 
 const STORAGE_KEY = 'codewhale-settings'
-const NAMELIST_KEY = 'codewhale-namelist'
+const NAMELIST_KEY = 'codewhale-namelist'       // old key (flat list)
+const PERSONNEL_KEY = 'codewhale-personnel'      // new key (structured)
+const PERSONNEL_SCHEMA_VERSION = 1
 
-// ── Name list entry ──
+// ── Legacy NameEntry (kept for backward compat with monitor-prompt.ts) ──
 export interface NameEntry {
   name: string
   department?: string
@@ -24,6 +26,60 @@ function saveJson(key: string, value: unknown) {
   localStorage.setItem(key, JSON.stringify(value))
 }
 
+// ── ID generator ──
+function genId(): string {
+  return `person-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+// ── Migration: old flat NameEntry[] → structured PersonEntry[] ──
+function migrateFromNameList(): PersonEntry[] {
+  const oldRaw = localStorage.getItem(NAMELIST_KEY)
+  if (!oldRaw) return []
+  try {
+    const oldList = JSON.parse(oldRaw) as NameEntry[]
+    if (!Array.isArray(oldList) || oldList.length === 0) return []
+    const now = new Date().toISOString()
+    return oldList.map((entry) => ({
+      id: genId(),
+      name: entry.name,
+      level: 'individual' as PersonnelLevel,
+      category: entry.role || '其他',
+      college: entry.department || undefined,
+      role: entry.role || undefined,
+      createdAt: now,
+      updatedAt: now,
+    }))
+  } catch { return [] }
+}
+
+// ── Personnel load/save ──
+function loadPersonnel(): PersonEntry[] {
+  const raw = loadJson<{ version: number; entries: PersonEntry[] } | null>(PERSONNEL_KEY, null as never)
+  if (raw && raw.version && Array.isArray(raw.entries) && raw.entries.length > 0) {
+    return raw.entries
+  }
+
+  // Attempt migration from old flat list
+  const migrated = migrateFromNameList()
+  if (migrated.length > 0) {
+    saveJson(PERSONNEL_KEY, {
+      version: PERSONNEL_SCHEMA_VERSION,
+      updatedAt: new Date().toISOString(),
+      entries: migrated,
+    })
+  }
+  return migrated
+}
+
+function savePersonnel(entries: PersonEntry[]) {
+  saveJson(PERSONNEL_KEY, {
+    version: PERSONNEL_SCHEMA_VERSION,
+    updatedAt: new Date().toISOString(),
+    entries,
+  })
+}
+
+// ── Settings ──
 function defaultRuntimeApiUrl(): string {
   const configured = import.meta.env.VITE_RUNTIME_API_URL
   if (configured && configured !== 'auto') return configured
@@ -90,37 +146,133 @@ function loadSettings(): AppSettings {
   return next
 }
 
-function loadNameList(): NameEntry[] {
-  return loadJson<NameEntry[]>(NAMELIST_KEY, [])
-}
-
 // ── Store ──
 interface SettingsStore extends AppSettings {
-  nameList: NameEntry[]
+  personnel: PersonEntry[]
 
   updateSettings: (patch: Partial<AppSettings>) => void
   isConfigured: () => boolean
 
+  // Personnel CRUD
+  addPerson: (entry: Omit<PersonEntry, 'id' | 'createdAt' | 'updatedAt'>) => void
+  updatePerson: (id: string, patch: Partial<PersonEntry>) => void
+  deletePerson: (id: string) => void
+  importPersonnel: (entries: PersonEntry[]) => void
+  clearPersonnel: () => void
+
+  // Query helpers
+  getSchoolPersons: () => PersonEntry[]
+  getCollegePersons: (college: string) => PersonEntry[]
+  getIndividualPersons: () => PersonEntry[]
+
+  // Legacy compat (used by ChatView → monitor-prompt.ts)
+  getFlatNameList: () => NameEntry[]
+  nameList: NameEntry[]
   setNameList: (list: NameEntry[]) => void
 }
 
-export const useSettingsStore = create<SettingsStore>((set, get) => ({
-  ...loadSettings(),
-  nameList: loadNameList(),
+export const useSettingsStore = create<SettingsStore>((set, get) => {
+  const initialPersonnel = loadPersonnel()
 
-  updateSettings: (patch) => {
-    const merged = normalizeSettings({ ...get(), ...patch })
-    set({ apiUrl: merged.apiUrl, authToken: merged.authToken })
-    saveJson(STORAGE_KEY, { apiUrl: merged.apiUrl, authToken: merged.authToken })
-  },
+  return {
+    ...loadSettings(),
+    personnel: initialPersonnel,
 
-  isConfigured: () => {
-    const { apiUrl } = get()
-    return apiUrl.length > 0
-  },
+    // Backward-compat nameList (derived from personnel)
+    nameList: initialPersonnel.map(p => ({
+      name: p.name,
+      department: p.college || p.department,
+      role: p.role || p.category,
+    })),
 
-  setNameList: (list) => {
-    set({ nameList: list })
-    saveJson(NAMELIST_KEY, list)
-  },
-}))
+    updateSettings: (patch) => {
+      const merged = normalizeSettings({ ...get(), ...patch })
+      set({ apiUrl: merged.apiUrl, authToken: merged.authToken })
+      saveJson(STORAGE_KEY, { apiUrl: merged.apiUrl, authToken: merged.authToken })
+    },
+
+    isConfigured: () => {
+      const { apiUrl } = get()
+      return apiUrl.length > 0
+    },
+
+    // ── Personnel CRUD ──
+    addPerson: (entry) => {
+      const now = new Date().toISOString()
+      const newEntry: PersonEntry = {
+        id: genId(),
+        ...entry,
+        createdAt: now,
+        updatedAt: now,
+      }
+      const updated = [...get().personnel, newEntry]
+      set({ personnel: updated })
+      savePersonnel(updated)
+      // Sync legacy nameList
+      set({ nameList: updated.map(p => ({ name: p.name, department: p.college || p.department, role: p.role || p.category })) })
+    },
+
+    updatePerson: (id, patch) => {
+      const now = new Date().toISOString()
+      const updated = get().personnel.map(p =>
+        p.id === id ? { ...p, ...patch, updatedAt: now } : p
+      )
+      set({ personnel: updated })
+      savePersonnel(updated)
+      set({ nameList: updated.map(p => ({ name: p.name, department: p.college || p.department, role: p.role || p.category })) })
+    },
+
+    deletePerson: (id) => {
+      const updated = get().personnel.filter(p => p.id !== id)
+      set({ personnel: updated })
+      savePersonnel(updated)
+      set({ nameList: updated.map(p => ({ name: p.name, department: p.college || p.department, role: p.role || p.category })) })
+    },
+
+    importPersonnel: (entries) => {
+      const updated = [...get().personnel, ...entries]
+      set({ personnel: updated })
+      savePersonnel(updated)
+      set({ nameList: updated.map(p => ({ name: p.name, department: p.college || p.department, role: p.role || p.category })) })
+    },
+
+    clearPersonnel: () => {
+      set({ personnel: [], nameList: [] })
+      savePersonnel([])
+    },
+
+    // ── Query helpers ──
+    getSchoolPersons: () => get().personnel.filter(p => p.level === 'school'),
+
+    getCollegePersons: (college: string) =>
+      get().personnel.filter(p => p.level === 'college' && p.college === college),
+
+    getIndividualPersons: () =>
+      get().personnel.filter(p => p.level === 'individual'),
+
+    // ── Legacy compat ──
+    getFlatNameList: () =>
+      get().personnel.map(p => ({
+        name: p.name,
+        department: p.college || p.department,
+        role: p.role || p.category,
+      })),
+
+    setNameList: (list) => {
+      // Legacy import: convert flat list to structured personnel
+      const now = new Date().toISOString()
+      const migrated: PersonEntry[] = list.map((entry) => ({
+        id: genId(),
+        name: entry.name,
+        level: 'individual' as PersonnelLevel,
+        category: entry.role || '其他',
+        college: entry.department || undefined,
+        role: entry.role || undefined,
+        createdAt: now,
+        updatedAt: now,
+      }))
+      set({ personnel: migrated, nameList: migrated.map(p => ({ name: p.name, department: p.college || p.department, role: p.role || p.category })) })
+      savePersonnel(migrated)
+    },
+  }
+})
