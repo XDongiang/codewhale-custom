@@ -92,9 +92,6 @@ export class CodeWhaleClient {
     if (sinceSeq !== undefined && sinceSeq > 0) {
       params.set('since_seq', String(sinceSeq))
     }
-    if (this.token) {
-      params.set('token', this.token)
-    }
     const qs = params.toString()
     return qs ? `${url}?${qs}` : url
   }

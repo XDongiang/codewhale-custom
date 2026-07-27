@@ -7,6 +7,7 @@ import { useSettingsStore } from '../stores/settings-store'
 import { useChatStore } from '../stores/chat-store'
 import { useSSE } from '../lib/hooks/useSSE'
 import { executeCommand, getCommands, parseCommand } from '../lib/commands'
+import { withMonitorNameList } from '../lib/monitor-prompt'
 import { ModelSelector } from '../components/ModelSelector'
 import type { ThreadDetail, TurnItemRecord, StartTurnRequest, ThreadRecord } from '../types'
 
@@ -113,7 +114,12 @@ export function ChatView() {
         const newId = thread.id
 
         // Send first turn
-        const req: StartTurnRequest = { prompt: text, model: selectedModel, auto_approve: true }
+        const req: StartTurnRequest = {
+          prompt: withMonitorNameList(text, settings.nameList),
+          input_summary: text,
+          model: selectedModel,
+          auto_approve: true,
+        }
         const res = await client.startTurn(newId, req)
         chat.startStreaming()
         chat.addTurn(res.turn)
@@ -129,7 +135,7 @@ export function ChatView() {
         setCreatingThread(false)
       }
     },
-    [client, chat, navigate, startEventStream]
+    [client, chat, navigate, selectedModel, settings.nameList, startEventStream]
   )
 
   // ── Send message to existing thread ──
@@ -137,7 +143,12 @@ export function ChatView() {
     async (threadId: string, text: string) => {
       setSending(true)
       try {
-        const req: StartTurnRequest = { prompt: text, model: selectedModel, auto_approve: true }
+        const req: StartTurnRequest = {
+          prompt: withMonitorNameList(text, settings.nameList),
+          input_summary: text,
+          model: selectedModel,
+          auto_approve: true,
+        }
         const res = await client.startTurn(threadId, req)
         chat.addTurn(res.turn)
         startEventStream(threadId)
@@ -148,7 +159,7 @@ export function ChatView() {
         setSending(false)
       }
     },
-    [client, chat, startEventStream]
+    [client, chat, selectedModel, settings.nameList, startEventStream]
   )
 
   // ── New Chat ──

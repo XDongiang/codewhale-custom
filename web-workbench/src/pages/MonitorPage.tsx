@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { getClient } from '../lib/api/client'
+import { withMonitorNameList } from '../lib/monitor-prompt'
 import { useSettingsStore } from '../stores/settings-store'
 
 const DEPARTMENTS = [
@@ -29,6 +30,7 @@ interface SavedReport {
 }
 
 const REPORTS_KEY = 'ccnu-monitor-reports'
+const REPORT_MAIL_KEY = 'ccnu-monitor-report-mail'
 
 function loadReports(): SavedReport[] {
   try {
@@ -37,6 +39,29 @@ function loadReports(): SavedReport[] {
 }
 function saveReports(reports: SavedReport[]) {
   localStorage.setItem(REPORTS_KEY, JSON.stringify(reports))
+}
+function loadReportMail() {
+  return localStorage.getItem(REPORT_MAIL_KEY) || ''
+}
+function saveReportMail(email: string) {
+  localStorage.setItem(REPORT_MAIL_KEY, email)
+}
+
+interface MailSummary {
+  action?: string
+  attachment_count?: number
+  from?: string
+  subject?: string
+  to?: string[]
+}
+
+interface PendingMail {
+  report: SavedReport
+  recipient: string
+  subject: string
+  confirmationToken: string
+  summary?: MailSummary
+  expiresIn?: number
 }
 
 export function MonitorPage() {
@@ -50,14 +75,87 @@ export function MonitorPage() {
   const [report, setReport] = useState('')
   const [error, setError] = useState('')
   const runningRef = useRef(false)
+  const runIdRef = useRef(0)
   const [savedReports, setSavedReports] = useState<SavedReport[]>(loadReports)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [recipientEmail, setRecipientEmail] = useState(loadReportMail)
+  const [mailStatus, setMailStatus] = useState('')
+  const [mailError, setMailError] = useState('')
+  const [mailSending, setMailSending] = useState(false)
+  const [pendingMail, setPendingMail] = useState<PendingMail | null>(null)
 
   const targetDept = customDept ? deptInput.trim() : dept
   const canRun = !!targetDept && !running
+  const normalizedRecipient = recipientEmail.trim()
+
+  const sendReportMail = useCallback(async (reportToSend: SavedReport, confirmationToken?: string) => {
+    const recipient = normalizedRecipient
+    if (!recipient) {
+      setMailStatus('')
+      setMailError('')
+      return
+    }
+
+    setMailSending(true)
+    setMailError('')
+    setMailStatus(confirmationToken ? '正在发送报告邮件...' : '正在准备报告邮件...')
+
+    const subject = `舆情监控报告：${reportToSend.dept} · ${reportToSend.timeRange}`
+    const body = [
+      subject,
+      `生成时间：${new Date(reportToSend.createdAt).toLocaleString('zh-CN')}`,
+      '',
+      reportToSend.content,
+    ].join('\n')
+
+    try {
+      const res = await fetch('/api/mail/send-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: recipient,
+          subject,
+          body,
+          confirmationToken,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || '邮件发送失败')
+      }
+
+      const result = data.result || {}
+      const mailData = result.data || result
+      if (mailData.confirmation_required && mailData.confirmation_token) {
+        setPendingMail({
+          report: reportToSend,
+          recipient,
+          subject,
+          confirmationToken: mailData.confirmation_token,
+          summary: mailData.summary,
+          expiresIn: mailData.expires_in,
+        })
+        setMailStatus('邮件已准备好，请确认发送')
+      } else {
+        setPendingMail(null)
+        setMailStatus('报告邮件已发送')
+      }
+    } catch (err) {
+      setMailError(err instanceof Error ? err.message : '邮件发送失败')
+      setMailStatus('')
+    } finally {
+      setMailSending(false)
+    }
+  }, [normalizedRecipient])
+
+  const handleRecipientChange = (value: string) => {
+    setRecipientEmail(value)
+    saveReportMail(value)
+  }
 
   const handleRun = useCallback(async () => {
     if (!targetDept || runningRef.current) return
+    const runId = ++runIdRef.current
     runningRef.current = true
     setRunning(true)
     setReport('')
@@ -67,13 +165,17 @@ export function MonitorPage() {
 
     try {
       const thread = await client.createThread({ model: 'deepseek-v4-pro', auto_approve: true })
-      const prompt = `$ccnu-monitor 帮我搜索${timeRange}华中师范大学${targetDept}的最新信息。用微博搜索和小红书搜索。最终输出完整报告，不要省略。`
-      await client.startTurn(thread.id, { prompt, auto_approve: true })
+      const inputSummary = `$ccnu-monitor 搜索${timeRange}华中师范大学${targetDept}的最新信息`
+      const prompt = withMonitorNameList(
+        `${inputSummary}。用微博搜索和小红书搜索。最终输出完整报告，不要省略。`,
+        settings.nameList,
+      )
+      await client.startTurn(thread.id, { prompt, input_summary: inputSummary, auto_approve: true })
 
       // Poll thread until turn completes
       for (let i = 0; i < 120; i++) {
         await new Promise(r => setTimeout(r, 3000))
-        if (!runningRef.current) return
+        if (!runningRef.current || runIdRef.current !== runId) return
 
         try {
           const detail = await client.getThread(thread.id)
@@ -100,6 +202,7 @@ export function MonitorPage() {
             setSavedReports(updated)
             saveReports(updated)
             setExpandedId(newReport.id)
+            void sendReportMail(newReport)
             return
           }
           if (lastTurn?.status === 'failed') {
@@ -125,6 +228,7 @@ export function MonitorPage() {
           setSavedReports(updated)
           saveReports(updated)
           setExpandedId(newReport.id)
+          void sendReportMail(newReport)
         } else {
           setError('监控超时，未获取到结果')
         }
@@ -132,14 +236,18 @@ export function MonitorPage() {
         setError('监控超时')
       }
     } catch (err: any) {
-      if (!runningRef.current) return
+      if (!runningRef.current || runIdRef.current !== runId) return
       setError(err.message || '执行失败')
+    } finally {
+      if (runIdRef.current === runId) {
+        setRunning(false)
+        runningRef.current = false
+      }
     }
-    setRunning(false)
-    runningRef.current = false
-  }, [targetDept, timeRange, settings, savedReports])
+  }, [targetDept, timeRange, settings, savedReports, sendReportMail])
 
   const handleStop = () => {
+    runIdRef.current += 1
     runningRef.current = false
     setRunning(false)
   }
@@ -149,6 +257,11 @@ export function MonitorPage() {
     setSavedReports(updated)
     saveReports(updated)
     if (expandedId === id) setExpandedId(null)
+  }
+
+  const confirmSendMail = () => {
+    if (!pendingMail || mailSending) return
+    void sendReportMail(pendingMail.report, pendingMail.confirmationToken)
   }
 
   return (
@@ -202,6 +315,14 @@ export function MonitorPage() {
           )}
         </div>
         {targetDept && <p className="mt-2 text-xs text-slate-600">将对 <span className="text-slate-400">{targetDept}</span> 进行{timeRange}舆情监控</p>}
+        <div className="mt-4 max-w-xl rounded-lg border border-slate-700/70 bg-slate-900/50 p-3">
+          <label className="mb-1.5 block text-xs font-medium text-slate-400">报告收件邮箱（可选）</label>
+          <input type="email" value={recipientEmail} onChange={e => handleRecipientChange(e.target.value)}
+            placeholder="输入邮箱，报告生成后会准备发送"
+            disabled={running}
+            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none disabled:opacity-50" />
+          <p className="mt-1.5 text-xs text-slate-600">填写后，报告生成完成会显示邮件摘要，需要点击确认才会发送。</p>
+        </div>
       </div>
 
       {/* Content */}
@@ -219,6 +340,36 @@ export function MonitorPage() {
           <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-5 mb-4">
             <p className="text-sm text-red-400">{error}</p>
             <button onClick={handleRun} className="mt-2 text-xs text-slate-500 hover:text-slate-300">重试</button>
+          </div>
+        )}
+
+        {(mailStatus || mailError || pendingMail) && !running && (
+          <div className={`mb-4 rounded-xl border p-4 ${
+            mailError
+              ? 'border-red-500/20 bg-red-500/5'
+              : 'border-blue-500/20 bg-blue-500/5'
+          }`}>
+            {mailError ? (
+              <p className="text-sm text-red-400">{mailError}</p>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-blue-300">{mailStatus}</p>
+                {pendingMail && (
+                  <div className="space-y-2">
+                    <div className="rounded-lg border border-slate-700/70 bg-slate-950/40 px-3 py-2 text-xs text-slate-400">
+                      <p>收件人：{pendingMail.summary?.to?.join(', ') || pendingMail.recipient}</p>
+                      <p>主题：{pendingMail.summary?.subject || pendingMail.subject}</p>
+                      {pendingMail.summary?.from && <p>发件人：{pendingMail.summary.from}</p>}
+                      {pendingMail.expiresIn && <p>确认有效期：{pendingMail.expiresIn} 秒</p>}
+                    </div>
+                    <button onClick={confirmSendMail} disabled={mailSending}
+                      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50 transition-colors">
+                      {mailSending ? '发送中...' : '确认发送邮件'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -254,6 +405,10 @@ export function MonitorPage() {
                     <button onClick={(e) => { e.stopPropagation(); navigate(`/chat/${r.threadId}`) }}
                       className="text-xs text-slate-600 hover:text-blue-400 px-2 py-1 rounded transition-colors"
                       title="查看原始对话">💬</button>
+                    <button onClick={(e) => { e.stopPropagation(); void sendReportMail(r) }}
+                      disabled={!normalizedRecipient || mailSending}
+                      className="text-xs text-slate-600 hover:text-emerald-400 disabled:opacity-30 px-2 py-1 rounded transition-colors"
+                      title="发送到收件邮箱">✉️</button>
                     <button onClick={(e) => { e.stopPropagation(); deleteReport(r.id) }}
                       className="text-xs text-slate-600 hover:text-red-400 px-2 py-1 rounded transition-colors"
                       title="删除">🗑️</button>

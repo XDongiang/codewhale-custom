@@ -14,9 +14,17 @@ export function SettingsPage() {
   const [tab, setTab] = useState<'connection' | 'namelist' | 'xhs'>('connection')
   const fileRef = useRef<HTMLInputElement>(null as unknown as HTMLInputElement)
 
+  useEffect(() => {
+    setApiUrl(settings.apiUrl)
+    setAuthToken(settings.authToken)
+  }, [settings.apiUrl, settings.authToken])
+
   const handleSave = () => {
     settings.updateSettings({ apiUrl, authToken })
-    getClient({ apiUrl, authToken })
+    const updated = useSettingsStore.getState()
+    setApiUrl(updated.apiUrl)
+    setAuthToken(updated.authToken)
+    getClient({ apiUrl: updated.apiUrl, authToken: updated.authToken })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -26,8 +34,8 @@ export function SettingsPage() {
     setTestResult(null)
     try {
       const client = getClient({ apiUrl, authToken })
-      const res = await client.health()
-      setTestResult({ ok: true, msg: `连接成功！服务状态：${res.status}` })
+      await client.listThreads()
+      setTestResult({ ok: true, msg: '连接成功！认证令牌和运行时接口均可用' })
     } catch (err) {
       setTestResult({ ok: false, msg: err instanceof Error ? err.message : '连接失败' })
     } finally {

@@ -21,7 +21,7 @@ export function Sidebar() {
       setApiStatus('checking')
       try {
         const client = getClient(settings)
-        await client.health()
+        await client.listThreads()
         if (!cancelled) setApiStatus('connected')
       } catch {
         if (!cancelled) setApiStatus('disconnected')
