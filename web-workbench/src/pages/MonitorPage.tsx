@@ -1,8 +1,9 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { getClient } from '../lib/api/client'
+import { serverApi, setServerToken, type ServerReport } from '../lib/api/server'
 import { buildMonitorPrompt } from '../lib/monitor-prompt'
 import { DEPARTMENTS } from '../lib/departments'
 import { useSettingsStore } from '../stores/settings-store'
@@ -23,38 +24,10 @@ const TIME_RANGES = [
   { label: '近一周', value: '最近一周' },
 ]
 
-interface SavedReport {
-  id: string
-  dept: string
-  timeRange: string
-  content: string
-  createdAt: string
-  threadId: string
-  level: ReportLevel
-  personName?: string
-}
+type SavedReport = ServerReport
 
-const REPORTS_KEY = 'ccnu-monitor-reports-v2'
 const REPORT_MAIL_KEY = 'ccnu-monitor-report-mail'
 
-function loadReports(): SavedReport[] {
-  try {
-    const raw = localStorage.getItem(REPORTS_KEY)
-    if (raw) return JSON.parse(raw) as SavedReport[]
-    // Migrate old reports
-    const old = localStorage.getItem('ccnu-monitor-reports')
-    if (old) {
-      const oldReports = JSON.parse(old) as SavedReport[]
-      const migrated = oldReports.map(r => ({ ...r, level: (r.level || 'college') as ReportLevel }))
-      localStorage.setItem(REPORTS_KEY, JSON.stringify(migrated))
-      return migrated
-    }
-  } catch { return [] }
-  return []
-}
-function saveReports(reports: SavedReport[]) {
-  localStorage.setItem(REPORTS_KEY, JSON.stringify(reports))
-}
 function loadReportMail() {
   return localStorage.getItem(REPORT_MAIL_KEY) || ''
 }
@@ -106,13 +79,21 @@ export function MonitorPage() {
   const [error, setError] = useState('')
   const runningRef = useRef(false)
   const runIdRef = useRef(0)
-  const [savedReports, setSavedReports] = useState<SavedReport[]>(loadReports)
+  const [savedReports, setSavedReports] = useState<SavedReport[]>([])
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [recipientEmail, setRecipientEmail] = useState(loadReportMail)
   const [mailStatus, setMailStatus] = useState('')
   const [mailError, setMailError] = useState('')
   const [mailSending, setMailSending] = useState(false)
   const [pendingMail, setPendingMail] = useState<PendingMail | null>(null)
+
+  // 报告以服务端为准,进入页面时加载
+  useEffect(() => {
+    setServerToken(settings.authToken)
+    serverApi.listReports()
+      .then(setSavedReports)
+      .catch((err) => setError(err instanceof Error ? err.message : '加载报告失败'))
+  }, [settings.authToken])
 
   // Computed values
   const targetDept = customDept ? deptInput.trim() : dept
@@ -168,7 +149,10 @@ export function MonitorPage() {
     try {
       const res = await fetch('/api/mail/send-report', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(settings.authToken ? { Authorization: `Bearer ${settings.authToken}` } : {}),
+        },
         body: JSON.stringify({
           to: recipient,
           subject,
@@ -203,12 +187,23 @@ export function MonitorPage() {
     } finally {
       setMailSending(false)
     }
-  }, [normalizedRecipient])
+  }, [normalizedRecipient, settings.authToken])
 
   const handleRecipientChange = (value: string) => {
     setRecipientEmail(value)
     saveReportMail(value)
   }
+
+  /** 报告保存到服务端(成功后置顶并展开),随后触发邮件准备。 */
+  const persistReport = useCallback((report: SavedReport) => {
+    serverApi.createReport(report)
+      .then((created) => {
+        setSavedReports((prev) => [created, ...prev.filter((r) => r.id !== created.id)].slice(0, 50))
+        setExpandedId(created.id)
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : '保存报告失败'))
+    void sendReportMail(report)
+  }, [sendReportMail])
 
   const handleRun = useCallback(async () => {
     if (runningRef.current) return
@@ -274,11 +269,7 @@ export function MonitorPage() {
               level: reportLevel,
               personName: reportLevel === 'individual' ? selectedPerson?.name : undefined,
             }
-            const updated = [newReport, ...savedReports].slice(0, 50)
-            setSavedReports(updated)
-            saveReports(updated)
-            setExpandedId(newReport.id)
-            void sendReportMail(newReport)
+            persistReport(newReport)
             return
           }
           if (lastTurn?.status === 'failed') {
@@ -302,11 +293,7 @@ export function MonitorPage() {
             level: reportLevel,
             personName: reportLevel === 'individual' ? selectedPerson?.name : undefined,
           }
-          const updated = [newReport, ...savedReports].slice(0, 50)
-          setSavedReports(updated)
-          saveReports(updated)
-          setExpandedId(newReport.id)
-          void sendReportMail(newReport)
+          persistReport(newReport)
         } else {
           setError('监控超时，未获取到结果')
         }
@@ -322,7 +309,7 @@ export function MonitorPage() {
         runningRef.current = false
       }
     }
-  }, [reportLevel, targetDept, timeRange, settings, savedReports, selectedPersonId, selectedPerson, sendReportMail])
+  }, [reportLevel, targetDept, timeRange, settings, selectedPersonId, selectedPerson, persistReport])
 
   const handleStop = () => {
     runIdRef.current += 1
@@ -331,10 +318,12 @@ export function MonitorPage() {
   }
 
   const deleteReport = (id: string) => {
-    const updated = savedReports.filter(r => r.id !== id)
-    setSavedReports(updated)
-    saveReports(updated)
-    if (expandedId === id) setExpandedId(null)
+    serverApi.deleteReport(id)
+      .then(() => {
+        setSavedReports((prev) => prev.filter((r) => r.id !== id))
+        if (expandedId === id) setExpandedId(null)
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : '删除报告失败'))
   }
 
   const confirmSendMail = () => {

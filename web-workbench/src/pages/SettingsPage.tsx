@@ -5,6 +5,7 @@ import type { PersonEntry, PersonnelLevel, ReportLevel } from '../types'
 import { PERSON_CATEGORIES } from '../types'
 import { DEPARTMENTS } from '../lib/departments'
 import { getClient } from '../lib/api/client'
+import { exportAllData, restoreFromJson } from '../lib/migration'
 
 const LEVEL_LABELS: Record<PersonnelLevel, string> = {
   school: '校级',
@@ -189,18 +190,109 @@ export function SettingsPage() {
         )}
 
         {tab === 'namelist' && (
-          <PersonnelTab
-            personnel={settings.personnel}
-            onAdd={settings.addPerson}
-            onUpdate={settings.updatePerson}
-            onDelete={settings.deletePerson}
-            onImport={handleFileUpload}
-            onClear={settings.clearPersonnel}
-            fileRef={fileRef}
-          />
+          <>
+            {settings.personnelStatus === 'loading' && (
+              <p className="mb-3 text-xs text-slate-500">名单加载中...</p>
+            )}
+            {settings.personnelStatus === 'error' && (
+              <div className="mb-3 rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-2 text-xs text-red-400">
+                名单加载失败:{settings.personnelError ?? '未知错误'}。请检查服务端连接后刷新页面。
+              </div>
+            )}
+            <PersonnelTab
+              personnel={settings.personnel}
+              onAdd={settings.addPerson}
+              onUpdate={settings.updatePerson}
+              onDelete={settings.deletePerson}
+              onImport={handleFileUpload}
+              onClear={settings.clearPersonnel}
+              fileRef={fileRef}
+            />
+          </>
         )}
         {tab === 'xhs' && <XhsTab />}
+
+        {/* 数据备份(导出/还原兜底) */}
+        <div className="mt-8 border-t border-slate-200/10 pt-6">
+          <h2 className="text-sm font-medium text-slate-300 mb-3">数据备份</h2>
+          <BackupSection />
+        </div>
       </div>
+    </div>
+  )
+}
+
+// ── 数据备份 ──
+function BackupSection() {
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleExport = async () => {
+    setBusy(true)
+    setMsg(null)
+    try {
+      const json = await exportAllData()
+      const blob = new Blob([json], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `ccnu-backup-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      setMsg({ ok: true, text: '已导出备份文件(名单 + 报告)' })
+    } catch (err) {
+      setMsg({ ok: false, text: err instanceof Error ? err.message : '导出失败' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleRestoreFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!confirm('还原将整体替换服务器上的名单与报告,确定继续?')) return
+
+    setBusy(true)
+    setMsg(null)
+    try {
+      const text = await file.text()
+      const result = await restoreFromJson(text)
+      setMsg({ ok: true, text: `还原成功:名单 ${result.personnel} 人,报告 ${result.reports} 份` })
+      await useSettingsStore.getState().hydratePersonnel()
+    } catch (err) {
+      setMsg({ ok: false, text: err instanceof Error ? err.message : '还原失败' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="max-w-lg rounded-xl border border-slate-200/10 bg-slate-900/50 p-4">
+      <p className="mb-3 text-xs text-slate-500">
+        导出服务器上的全部名单与报告为 JSON 文件;还原时整体替换。迁移或误删后可用此功能恢复。
+      </p>
+      <div className="flex gap-2">
+        <button
+          onClick={() => void handleExport()}
+          disabled={busy}
+          className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 disabled:opacity-50 transition-colors"
+        >
+          {busy ? '处理中...' : '⬇ 导出备份'}
+        </button>
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={busy}
+          className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 disabled:opacity-50 transition-colors"
+        >
+          ⬆ 还原备份
+        </button>
+        <input ref={fileRef} type="file" accept=".json" onChange={(e) => void handleRestoreFile(e)} className="hidden" />
+      </div>
+      {msg && (
+        <p className={`mt-3 text-xs ${msg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{msg.text}</p>
+      )}
     </div>
   )
 }
@@ -780,7 +872,10 @@ function XhsTab() {
   const api = (url: string, method = 'GET', timeout = 15000) => {
     const ctrl = new AbortController()
     const timer = setTimeout(() => ctrl.abort(), timeout)
-    return fetch(url, { method, signal: ctrl.signal })
+    const headers: Record<string, string> = {}
+    const token = useSettingsStore.getState().authToken
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    return fetch(url, { method, signal: ctrl.signal, headers })
       .then(r => r.json())
       .catch(() => ({ ok: false, output: '请求超时或失败' }))
       .finally(() => clearTimeout(timer))

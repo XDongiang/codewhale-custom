@@ -1,0 +1,23 @@
+{
+  "name": "ccnu-ai-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "华师 AI 工作台后端服务 — API(名单/报告/邮件/小红书) + Runtime 代理 + 生产静态服务",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

@@ -10,7 +10,7 @@ CODEWHALE_BIN    := $(shell which codewhale 2>/dev/null || echo "")
 REPO_ROOT        := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 MCP_VENDOR       := $(REPO_ROOT)/mcp-servers
 
-.PHONY: install uninstall status check doctor start stop dev-workbench build-workbench help
+.PHONY: install uninstall status check doctor start stop dev build server dev-workbench build-workbench help
 
 SCRIPTS_DIR := $(REPO_ROOT)/scripts
 
@@ -190,18 +190,31 @@ doctor: check
 	@$(CODEWHALE_BIN) doctor
 
 WEBBENCH_DIR := $(REPO_ROOT)/web-workbench
+SERVER_DIR := $(REPO_ROOT)/server
 
-.PHONY: dev-workbench build-workbench
+.PHONY: dev-workbench build-workbench dev build server
 
-## start: 一键启动 CodeWhale Runtime + Web Workbench
+## start: 一键启动生产形态(runtime + server:3001,需先 make build)
 start:
-	@bash $(SCRIPTS_DIR)/start.sh
+	@MODE=prod bash $(SCRIPTS_DIR)/start.sh
+
+## dev: 一键启动开发环境(runtime + server:8090 + Vite:3002)
+dev:
+	@MODE=dev bash $(SCRIPTS_DIR)/start.sh
+
+## build: 构建 server 与 web-workbench 产物
+build:
+	@cd $(REPO_ROOT) && npm run build
+
+## server: 构建并运行后端服务(单独使用)
+server:
+	@cd $(REPO_ROOT) && npm run build -w server && npm run start -w server
 
 ## stop: 停止所有服务
 stop:
 	@bash $(SCRIPTS_DIR)/stop.sh
 
-## dev-workbench: 单独启动 Web Workbench 开发服务器（localhost:3000）
+## dev-workbench: 单独启动 Web Workbench 开发服务器
 dev-workbench:
 	@cd $(WEBBENCH_DIR) && npm run dev
 
@@ -213,10 +226,13 @@ build-workbench:
 help:
 	@echo "华师 AI 工作台 — 部署工具"
 	@echo ""
-	@echo "  make install          部署配置（Skills + MCP + Memory）"
-	@echo "  make setup-mcp        自动安装 MCP 工具（微博/小红书）"
-	@echo "  make install-all      一键全部安装（MCP + 部署）"
-	@echo "  make start            启动服务（serve + Web UI）"
+	@echo "  make install          部署配置(Skills + MCP + Memory)"
+	@echo "  make setup-mcp        自动安装 MCP 工具(微博/小红书)"
+	@echo "  make install-all      一键全部安装(MCP + 部署)"
+	@echo "  make dev              开发环境(runtime + server:8090 + Vite:3002)"
+	@echo "  make build            构建 server 与 web-workbench"
+	@echo "  make start            生产形态(runtime + server:3001,需先 build)"
+	@echo "  make server           单独构建并运行后端服务"
 	@echo "  make stop             停止所有服务"
 	@echo "  make status           查看部署状态"
 	@echo "  make doctor           运行 codewhale doctor"

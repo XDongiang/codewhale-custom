@@ -8,6 +8,11 @@ web-workbench/node_modules/
 web-workbench/dist/
 web-workbench/.wrangler/
 
+# ── 后端服务 ──
+server/dist/
+server/data/
+node_modules/
+
 # ── TypeScript 增量编译缓存 ──
 *.tsbuildinfo
 
