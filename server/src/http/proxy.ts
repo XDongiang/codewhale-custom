@@ -25,15 +25,20 @@ export function proxyRequest(
   runtimeUrl: string,
   targetPath: string,
   req: IncomingMessage,
-  res: ServerResponse
+  res: ServerResponse,
+  runtimeToken: string
 ): Promise<void> {
   return new Promise((resolve) => {
     const url = new URL(runtimeUrl)
     const target = `${url.protocol}//${url.host}${targetPath}`
 
+    const headers = filterRequestHeaders(req.headers)
+    // 浏览器不再持有共享 token:代理一律注入服务器配置的 Runtime 凭证
+    headers['authorization'] = `Bearer ${runtimeToken}`
+
     const proxyReq = http.request(target, {
       method: req.method,
-      headers: filterRequestHeaders(req.headers),
+      headers,
     })
 
     proxyReq.on('response', (proxyRes) => {

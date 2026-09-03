@@ -57,7 +57,7 @@ function defaultRuntimeApiUrl(): string {
 function defaultSettings(): AppSettings {
   return {
     apiUrl: defaultRuntimeApiUrl(),
-    authToken: import.meta.env.VITE_AUTH_TOKEN ?? '',
+    authToken: '', // 登录后由 auth-store 镜像用户 token
   }
 }
 
@@ -97,9 +97,7 @@ function normalizeSettings(settings: AppSettings, fallback = defaultSettings()):
   if (fallback.apiUrl === '/runtime-api' || !next.apiUrl.trim() || shouldUseDefaultApiUrl(next.apiUrl, fallback.apiUrl)) {
     next.apiUrl = fallback.apiUrl
   }
-  if (fallback.authToken) {
-    next.authToken = fallback.authToken
-  }
+  // 注意:authToken 不再用环境变量回填,它是登录用户的会话 token 镜像
   return next
 }
 

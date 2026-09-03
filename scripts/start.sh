@@ -112,12 +112,14 @@ if [ "$MODE" = "prod" ]; then
     (cd "$REPO_ROOT" && \
      APP_PORT="$SERVER_PORT" \
      AUTH_TOKEN="$AUTH_TOKEN" \
+     ADMIN_PASSWORD="$ADMIN_PASSWORD" \
      RUNTIME_URL="http://127.0.0.1:${CODEWHALE_PORT}" \
      node "$SERVER_DIR/dist/index.js") &
 else
     (cd "$REPO_ROOT" && \
      APP_PORT="$SERVER_PORT" \
      AUTH_TOKEN="$AUTH_TOKEN" \
+     ADMIN_PASSWORD="$ADMIN_PASSWORD" \
      RUNTIME_URL="http://127.0.0.1:${CODEWHALE_PORT}" \
      npm run dev -w server) &
 fi

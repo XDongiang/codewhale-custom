@@ -551,3 +551,48 @@ ccnu-ai-server(node server/dist/index.js, :3001)
 ## 13.5 回滚
 
 回滚 = 切回旧目录 + 恢复 `codewhale-web.service`(+ 原 drop-in),停用 `codewhale-server.service`。已迁到 `server/data/` 的数据不受影响,浏览器 localStorage 未被清除时也能退回旧版直接使用。
+
+---
+
+# 十四、权限体系(permission)部署说明
+
+> foundation 之后新增的变更:服务端引入用户登录与三档角色(admin / school / college),
+> 生产部署只需多配一个环境变量,其余同 13.3 节。
+
+## 14.1 变化摘要
+
+- 新增 `/api/auth/login|logout|me` 与 `/api/users/*`(仅 admin)。
+- 所有 `/api/*`(除 health 与 login/logout)与 `/runtime-api/*` 均要求**用户会话 token**。
+- **浏览器不再持有共享 token**;代理自动用服务器配置的 `AUTH_TOKEN` 访问 Runtime,原 CORS drop-in(`multi-origin.conf`)保持可移除。
+- 名单/报告读取按角色过滤;名单写入、用户管理、备份还原仅 admin。
+
+## 14.2 升级步骤增量(在 13.3 基础上)
+
+1. 部署新 `server/dist` 前,确认 `server/data/` 中已有 `users.json` 或为空(首次启动自动建 admin)。
+2. systemd unit 增加环境变量:
+
+   ```ini
+   Environment=ADMIN_PASSWORD=<首次 admin 密码(≥8 位),首次启动后建议移除>
+   ```
+
+   未设置 `ADMIN_PASSWORD` 时,服务启动会在日志打印一次随机 admin 密码。
+3. 重启后核查:
+
+   ```bash
+   # 登录(替换为实际密码)
+   curl -s -X POST http://127.0.0.1:3001/api/auth/login \
+     -H 'Content-Type: application/json' \
+     -d '{"username":"admin","password":"<密码>"}'
+   # 用返回的 token 访问受保护接口
+   curl -s http://127.0.0.1:3001/api/auth/me -H "Authorization: Bearer <token>"
+   curl -s http://127.0.0.1:3001/api/personnel -H "Authorization: Bearer <token>"
+   ```
+
+4. 浏览器首次访问会跳转登录页;admin 登录后在「设置 → 用户管理」建号(院级账号必须选学院)。
+5. 旧版无账号体系,升级后不存在兼容迁移;首次登录即 admin。
+
+## 14.3 安全边界(请知悉)
+
+- 局域网明文传输(无 TLS),请勿在非信任网络使用;密码不落日志。
+- 监控线程创建在 Runtime 侧,服务端无法解析 prompt 校验监控范围,院级限制由前端 UI 承担(详见 docs/permission-plan.md「已知边界」)。
+- `server/data/users.json` 与 `sessions.json` 同样属于**部署时不得覆盖**的持久化文件。

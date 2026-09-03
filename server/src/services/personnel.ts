@@ -1,4 +1,5 @@
 import type { Storage } from './storage.js'
+import type { UserRole } from './users.js'
 import {
   PERSONNEL_LEVELS,
   REPORT_LEVELS,
@@ -51,6 +52,18 @@ export class PersonnelService {
       updatedAt: now(),
       entries: [],
     })
+  }
+
+  /**
+   * 按角色返回名单:admin/school 全部;college 仅本学院条目。
+   * 无学院归属的条目(校级名单、未归属个人)对院级用户不可见。
+   */
+  listScoped(scope?: { role: UserRole; college?: string }): PersonnelDB {
+    const db = this.list()
+    if (!scope || scope.role === 'admin' || scope.role === 'school') return db
+    const college = scope.college ?? ''
+    const entries = db.entries.filter((e) => e.college === college)
+    return { ...db, entries }
   }
 
   private save(entries: PersonEntry[]): PersonnelDB {
@@ -196,6 +209,31 @@ export class ReportsService {
     return this.storage.readDoc<SavedReport[]>(REPORTS_DOC, [])
   }
 
+  /**
+   * 按角色返回报告:admin/school 全部(含个人报告);college 仅本院学院级报告,
+   * 个人报告(level=individual)不可见。
+   */
+  listScoped(scope?: { role: UserRole; college?: string }): SavedReport[] {
+    const all = this.list()
+    if (!scope || scope.role === 'admin' || scope.role === 'school') return all
+    const college = scope.college ?? ''
+    return all.filter((r) => r.level === 'college' && r.dept === college)
+  }
+
+  /**
+   * 创建报告。college 用户只能创建本学院的学院级报告(dept 与 level 双重校验)。
+   */
+  createScoped(input: Record<string, unknown>, scope?: { role: UserRole; college?: string }): SavedReport | null {
+    if (scope && scope.role === 'college') {
+      const dept = typeof input['dept'] === 'string' ? input['dept'].trim() : ''
+      const level = typeof input['level'] === 'string' ? input['level'] : ''
+      if (dept !== scope.college || level !== 'college') {
+        throw new Error('越权:院级用户只能创建本学院的学院级报告')
+      }
+    }
+    return this.create(input)
+  }
+
   create(input: Record<string, unknown>): SavedReport | null {
     const content = asString(input.content)
     if (!content) return null
@@ -220,6 +258,20 @@ export class ReportsService {
     if (next.length === this.list().length) return false
     this.storage.writeDoc(REPORTS_DOC, next)
     return true
+  }
+
+  /**
+   * 按角色删除:admin/school 任意;college 仅限本学院学院级报告。
+   */
+  removeScoped(id: string, scope?: { role: UserRole; college?: string }): boolean {
+    if (scope && scope.role === 'college') {
+      const target = this.list().find((r) => r.id === id)
+      if (!target) return false
+      if (target.level !== 'college' || target.dept !== scope.college) {
+        throw new Error('越权:只能删除本学院的学院级报告')
+      }
+    }
+    return this.remove(id)
   }
 
   /** 整表替换(备份还原)。非法记录丢弃,保留传入 id。 */

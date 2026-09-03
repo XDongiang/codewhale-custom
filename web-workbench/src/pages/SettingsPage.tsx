@@ -1,6 +1,9 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import { useSettingsStore } from '../stores/settings-store'
+import { useAuthStore } from '../stores/auth-store'
+import { serverApi } from '../lib/api/server'
 import type { PersonEntry, PersonnelLevel, ReportLevel } from '../types'
 import { PERSON_CATEGORIES } from '../types'
 import { DEPARTMENTS } from '../lib/departments'
@@ -18,25 +21,25 @@ const LEVEL_LABELS: Record<PersonnelLevel, string> = {
 
 export function SettingsPage() {
   const settings = useSettingsStore()
+  const auth = useAuthStore()
+  const navigate = useNavigate()
+  const isAdmin = auth.user?.role === 'admin'
   const [apiUrl, setApiUrl] = useState(settings.apiUrl)
-  const [authToken, setAuthToken] = useState(settings.authToken)
   const [saved, setSaved] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
-  const [tab, setTab] = useState<'connection' | 'namelist' | 'xhs'>('connection')
+  const [tab, setTab] = useState<'connection' | 'namelist' | 'xhs' | 'users'>('connection')
   const fileRef = useRef<HTMLInputElement>(null as unknown as HTMLInputElement)
 
   useEffect(() => {
     setApiUrl(settings.apiUrl)
-    setAuthToken(settings.authToken)
-  }, [settings.apiUrl, settings.authToken])
+  }, [settings.apiUrl])
 
   const handleSave = () => {
-    settings.updateSettings({ apiUrl, authToken })
+    settings.updateSettings({ apiUrl })
     const updated = useSettingsStore.getState()
     setApiUrl(updated.apiUrl)
-    setAuthToken(updated.authToken)
-    getClient({ apiUrl: updated.apiUrl, authToken: updated.authToken })
+    getClient(updated)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -45,9 +48,9 @@ export function SettingsPage() {
     setTesting(true)
     setTestResult(null)
     try {
-      const client = getClient({ apiUrl, authToken })
+      const client = getClient(useSettingsStore.getState())
       await client.listThreads()
-      setTestResult({ ok: true, msg: '连接成功！认证令牌和运行时接口均可用' })
+      setTestResult({ ok: true, msg: '连接成功!运行时接口可用' })
     } catch (err) {
       setTestResult({ ok: false, msg: err instanceof Error ? err.message : '连接失败' })
     } finally {
@@ -147,6 +150,7 @@ export function SettingsPage() {
     { key: 'connection' as const, label: '服务连接' },
     { key: 'namelist' as const, label: '人员名单' },
     { key: 'xhs' as const, label: '小红书' },
+    ...(isAdmin ? [{ key: 'users' as const, label: '用户管理' }] : []),
   ]
 
   return (
@@ -178,14 +182,17 @@ export function SettingsPage() {
         {tab === 'connection' && (
           <ConnectionTab
             apiUrl={apiUrl}
-            authToken={authToken}
             saved={saved}
             testing={testing}
             testResult={testResult}
+            user={auth.user}
             onApiUrlChange={setApiUrl}
-            onAuthTokenChange={setAuthToken}
             onSave={handleSave}
             onTest={handleTest}
+            onLogout={async () => {
+              await auth.logout()
+              navigate('/login', { replace: true })
+            }}
           />
         )}
 
@@ -201,6 +208,7 @@ export function SettingsPage() {
             )}
             <PersonnelTab
               personnel={settings.personnel}
+              readonly={!isAdmin}
               onAdd={settings.addPerson}
               onUpdate={settings.updatePerson}
               onDelete={settings.deletePerson}
@@ -211,12 +219,15 @@ export function SettingsPage() {
           </>
         )}
         {tab === 'xhs' && <XhsTab />}
+        {tab === 'users' && isAdmin && <UsersTab />}
 
-        {/* 数据备份(导出/还原兜底) */}
-        <div className="mt-8 border-t border-slate-200/10 pt-6">
-          <h2 className="text-sm font-medium text-slate-300 mb-3">数据备份</h2>
-          <BackupSection />
-        </div>
+        {/* 数据备份(仅管理员) */}
+        {isAdmin && (
+          <div className="mt-8 border-t border-slate-200/10 pt-6">
+            <h2 className="text-sm font-medium text-slate-300 mb-3">数据备份</h2>
+            <BackupSection />
+          </div>
+        )}
       </div>
     </div>
   )
@@ -298,30 +309,53 @@ function BackupSection() {
 }
 
 // ── Connection Tab ──
+const ROLE_LABELS: Record<string, string> = {
+  admin: '管理员',
+  school: '校级用户',
+  college: '院级用户',
+}
+
 function ConnectionTab({
-  apiUrl, authToken, saved, testing, testResult,
-  onApiUrlChange, onAuthTokenChange, onSave, onTest,
+  apiUrl, saved, testing, testResult, user,
+  onApiUrlChange, onSave, onTest, onLogout,
 }: {
-  apiUrl: string; authToken: string; saved: boolean; testing: boolean
+  apiUrl: string; saved: boolean; testing: boolean
   testResult: { ok: boolean; msg: string } | null
-  onApiUrlChange: (v: string) => void; onAuthTokenChange: (v: string) => void
-  onSave: () => void; onTest: () => void
+  user: { username: string; role: string; college?: string } | null
+  onApiUrlChange: (v: string) => void
+  onSave: () => void; onTest: () => void; onLogout: () => void | Promise<void>
 }) {
   return (
     <div className="max-w-lg space-y-5">
+      {/* 当前登录用户 */}
+      <div className="rounded-xl border border-slate-200/10 bg-slate-900/50 p-4">
+        <label className="mb-2.5 block text-sm font-medium text-slate-300">当前登录</label>
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600/20 text-sm font-semibold text-blue-300">
+            {user?.username.slice(0, 1).toUpperCase() ?? '?'}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-200">{user?.username}</p>
+            <p className="text-xs text-slate-500">
+              {user ? `${ROLE_LABELS[user.role] ?? user.role}${user.college ? ` · ${user.college}` : ''}` : '未登录'}
+            </p>
+          </div>
+          <button
+            onClick={() => void onLogout()}
+            className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-800 hover:text-red-400 transition-colors"
+          >
+            退出登录
+          </button>
+        </div>
+        <p className="mt-2.5 text-xs text-slate-600">角色与可见范围由管理员在「用户管理」中分配,此处无需手动配置令牌。</p>
+      </div>
+
       <div>
         <label className="mb-1.5 block text-sm font-medium text-slate-300">运行时 API 地址</label>
         <input type="text" value={apiUrl} onChange={(e) => onApiUrlChange(e.target.value)}
-          placeholder="http://localhost:7878"
+          placeholder="/runtime-api"
           className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none transition-colors" />
-        <p className="mt-1.5 text-xs text-slate-500"><code className="text-slate-400">codewhale serve --http</code> 运行的地址</p>
-      </div>
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-slate-300">认证令牌</label>
-        <input type="password" value={authToken} onChange={(e) => onAuthTokenChange(e.target.value)}
-          placeholder="dev-token"
-          className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none transition-colors" />
-        <p className="mt-1.5 text-xs text-slate-500">与启动命令中的 <code className="text-slate-400">--auth-token</code> 保持一致</p>
+        <p className="mt-1.5 text-xs text-slate-500">一般保持默认(<code className="text-slate-400">/runtime-api</code>),由服务器代理到 CodeWhale Runtime</p>
       </div>
       <div className="flex gap-3">
         <button onClick={onSave}
@@ -346,9 +380,10 @@ function ConnectionTab({
 
 // ── Personnel Tab ──
 function PersonnelTab({
-  personnel, onAdd, onUpdate, onDelete, onImport, onClear, fileRef,
+  personnel, readonly, onAdd, onUpdate, onDelete, onImport, onClear, fileRef,
 }: {
   personnel: PersonEntry[]
+  readonly?: boolean
   onAdd: (entry: Omit<PersonEntry, 'id' | 'createdAt' | 'updatedAt'>) => void
   onUpdate: (id: string, patch: Partial<PersonEntry>) => void
   onDelete: (id: string) => void
@@ -619,14 +654,18 @@ function PersonnelTab({
       <td className="px-3 py-1.5 text-xs">{p.college || '-'}</td>
       <td className="px-3 py-1.5 text-xs">{p.role || '-'}</td>
       <td className="px-3 py-1.5 text-right">
-        <button onClick={() => startEdit(p)}
-          className="text-xs text-slate-600 hover:text-blue-400 px-1.5 py-0.5 rounded transition-colors opacity-0 group-hover:opacity-100">
-          编辑
-        </button>
-        <button onClick={() => { if (confirm(`确定删除 ${p.name}？`)) onDelete(p.id) }}
-          className="text-xs text-slate-600 hover:text-red-400 px-1.5 py-0.5 rounded transition-colors opacity-0 group-hover:opacity-100">
-          删除
-        </button>
+        {!readonly && (
+          <>
+            <button onClick={() => startEdit(p)}
+              className="text-xs text-slate-600 hover:text-blue-400 px-1.5 py-0.5 rounded transition-colors opacity-0 group-hover:opacity-100">
+              编辑
+            </button>
+            <button onClick={() => { if (confirm(`确定删除 ${p.name}？`)) onDelete(p.id) }}
+              className="text-xs text-slate-600 hover:text-red-400 px-1.5 py-0.5 rounded transition-colors opacity-0 group-hover:opacity-100">
+              删除
+            </button>
+          </>
+        )}
       </td>
     </tr>
   )
@@ -686,20 +725,26 @@ function PersonnelTab({
 
         <div className="flex-1" />
 
-        <button onClick={() => { setShowAddForm(!showAddForm); setEditingId(null); setForm(emptyForm()) }}
-          className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-500 transition-colors">
-          {showAddForm ? '收起' : '+ 添加人员'}
-        </button>
-        <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={onImport} className="hidden" />
-        <button onClick={() => { setShowCollect(true); setCollectResult(null); setCollectError(''); setCollectPreview(false) }}
-          className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300 hover:bg-slate-800 transition-colors">
-          🌐 采集人员
-        </button>
-        <button onClick={() => fileRef.current?.click()}
-          className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300 hover:bg-slate-800 transition-colors">
-          📎 导入 Excel
-        </button>
-        {personnel.length > 0 && (
+        {readonly ? (
+          <span className="text-xs text-slate-600">名单只读(由管理员维护)</span>
+        ) : (
+          <>
+            <button onClick={() => { setShowAddForm(!showAddForm); setEditingId(null); setForm(emptyForm()) }}
+              className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-500 transition-colors">
+              {showAddForm ? '收起' : '+ 添加人员'}
+            </button>
+            <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={onImport} className="hidden" />
+            <button onClick={() => { setShowCollect(true); setCollectResult(null); setCollectError(''); setCollectPreview(false) }}
+              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300 hover:bg-slate-800 transition-colors">
+              🌐 采集人员
+            </button>
+            <button onClick={() => fileRef.current?.click()}
+              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300 hover:bg-slate-800 transition-colors">
+              📎 导入 Excel
+            </button>
+          </>
+        )}
+        {!readonly && personnel.length > 0 && (
           <button onClick={() => { if (confirm('确定清空全部人员？')) onClear() }}
             className="rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-1 text-xs text-red-400 hover:bg-red-500/10 transition-colors">
             清空全部
@@ -858,6 +903,191 @@ function PersonnelTab({
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+
+// ── 用户管理 Tab(仅 admin)──
+function UsersTab() {
+  const [users, setUsers] = useState<Array<{ id: string; username: string; role: string; college?: string; disabled: boolean }>>([])
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [form, setForm] = useState({ username: '', password: '', role: 'college', college: String(DEPARTMENTS[0]) })
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({ role: 'college', college: String(DEPARTMENTS[0]), password: '' })
+
+  const load = useCallback(async () => {
+    try {
+      setUsers(await serverApi.listUsers())
+      setError('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '加载用户失败')
+    }
+  }, [])
+
+  useEffect(() => { void load() }, [load])
+
+  const handleCreate = async () => {
+    setBusy(true); setError('')
+    try {
+      await serverApi.createUser({
+        username: form.username.trim(),
+        password: form.password,
+        role: form.role,
+        college: form.role === 'college' ? form.college : undefined,
+      })
+      setForm({ username: '', password: '', role: 'college', college: DEPARTMENTS[0] })
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '创建失败')
+    } finally { setBusy(false) }
+  }
+
+  const handleSaveEdit = async (id: string) => {
+    setBusy(true); setError('')
+    try {
+      await serverApi.updateUser(id, {
+        role: editForm.role,
+        college: editForm.role === 'college' ? editForm.college : undefined,
+        password: editForm.password || undefined,
+      })
+      setEditingId(null)
+      setEditForm({ role: 'college', college: DEPARTMENTS[0], password: '' })
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '更新失败')
+    } finally { setBusy(false) }
+  }
+
+  const handleToggleDisabled = async (id: string, disabled: boolean) => {
+    try {
+      await serverApi.updateUser(id, { disabled })
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '操作失败')
+    }
+  }
+
+  const handleDelete = async (id: string, username: string) => {
+    if (!confirm(`确定删除用户 ${username}?`)) return
+    try {
+      await serverApi.deleteUser(id)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '删除失败')
+    }
+  }
+
+  return (
+    <div className="max-w-3xl space-y-4">
+      {error && (
+        <div className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-2 text-xs text-red-400">{error}</div>
+      )}
+
+      {/* 创建用户 */}
+      <div className="rounded-xl border border-slate-200/10 bg-slate-900/50 p-4">
+        <h3 className="mb-3 text-sm font-medium text-slate-300">新建用户</h3>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <input type="text" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })}
+            placeholder="用户名" className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 placeholder-slate-600 focus:border-blue-500 focus:outline-none" />
+          <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
+            placeholder="密码(至少8位)" className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 placeholder-slate-600 focus:border-blue-500 focus:outline-none" />
+          <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
+            className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-blue-500 focus:outline-none">
+            <option value="college">院级用户</option>
+            <option value="school">校级用户</option>
+            <option value="admin">管理员</option>
+          </select>
+          {form.role === 'college' && (
+            <select value={form.college} onChange={(e) => setForm({ ...form, college: e.target.value })}
+              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-blue-500 focus:outline-none">
+              {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+          )}
+          <button onClick={() => void handleCreate()} disabled={busy || !form.username.trim() || form.password.length < 8}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50 transition-colors">
+            创建
+          </button>
+        </div>
+      </div>
+
+      {/* 用户列表 */}
+      <div className="rounded-xl border border-slate-200/10 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-xs text-slate-500 border-b border-slate-200/5 bg-slate-900/50">
+              <th className="text-left px-4 py-2 font-medium">用户名</th>
+              <th className="text-left px-4 py-2 font-medium">角色</th>
+              <th className="text-left px-4 py-2 font-medium">学院</th>
+              <th className="text-left px-4 py-2 font-medium">状态</th>
+              <th className="text-right px-4 py-2 font-medium">操作</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200/5">
+            {users.map((u) => (
+              <tr key={u.id} className="text-slate-400 hover:bg-slate-800/30">
+                <td className="px-4 py-2 text-slate-200 font-medium">{u.username}</td>
+                <td className="px-4 py-2 text-xs">
+                  {editingId === u.id ? (
+                    <select value={editForm.role} onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                      className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200">
+                      <option value="college">院级用户</option>
+                      <option value="school">校级用户</option>
+                      <option value="admin">管理员</option>
+                    </select>
+                  ) : (
+                    ROLE_LABELS[u.role] ?? u.role
+                  )}
+                </td>
+                <td className="px-4 py-2 text-xs">
+                  {editingId === u.id && editForm.role === 'college' ? (
+                    <select value={editForm.college} onChange={(e) => setEditForm({ ...editForm, college: e.target.value })}
+                      className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200">
+                      {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  ) : (
+                    u.college || '-'
+                  )}
+                </td>
+                <td className="px-4 py-2 text-xs">
+                  {u.disabled ? <span className="text-red-400">已禁用</span> : <span className="text-emerald-400">正常</span>}
+                </td>
+                <td className="px-4 py-2 text-right text-xs space-x-1">
+                  {editingId === u.id ? (
+                    <>
+                      <button onClick={() => void handleSaveEdit(u.id)} disabled={busy}
+                        className="rounded bg-emerald-600 px-2 py-1 text-white hover:bg-emerald-500 disabled:opacity-50">保存</button>
+                      <button onClick={() => setEditingId(null)}
+                        className="rounded border border-slate-700 px-2 py-1 text-slate-400 hover:text-slate-200">取消</button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => { setEditingId(u.id); setEditForm({ role: u.role, college: u.college ?? String(DEPARTMENTS[0]), password: '' }) }}
+                        className="rounded border border-slate-700 px-2 py-1 text-slate-400 hover:text-blue-400">编辑</button>
+                      <button onClick={() => {
+                        const p = window.prompt(`为 ${u.username} 设置新密码(至少8位)`)
+                        if (p && p.length >= 8) {
+                          void serverApi.updateUser(u.id, { password: p }).then(load).catch((err) => setError(err instanceof Error ? err.message : '重置密码失败'))
+                        } else if (p !== null && p !== '') {
+                          setError('密码至少 8 位')
+                        }
+                      }}
+                        className="rounded border border-slate-700 px-2 py-1 text-slate-400 hover:text-amber-400">重置密码</button>
+                      <button onClick={() => void handleToggleDisabled(u.id, !u.disabled)}
+                        className="rounded border border-slate-700 px-2 py-1 text-slate-400 hover:text-amber-400">
+                        {u.disabled ? '启用' : '禁用'}
+                      </button>
+                      <button onClick={() => void handleDelete(u.id, u.username)}
+                        className="rounded border border-red-500/20 px-2 py-1 text-red-400 hover:bg-red-500/10">删除</button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

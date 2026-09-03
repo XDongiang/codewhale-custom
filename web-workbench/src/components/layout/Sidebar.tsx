@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { getClient } from '../../lib/api/client'
 import { useSettingsStore } from '../../stores/settings-store'
+import { useAuthStore } from '../../stores/auth-store'
+
+const ROLE_LABEL: Record<string, string> = {
+  admin: '管理员',
+  school: '校级用户',
+  college: '院级用户',
+}
 
 const navItems = [
   { to: '/', label: '对话', icon: '💬', end: true },
@@ -12,7 +19,10 @@ const navItems = [
 
 export function Sidebar() {
   const location = useLocation()
+  const navigate = useNavigate()
   const settings = useSettingsStore()
+  const user = useAuthStore((s) => s.user)
+  const logout = useAuthStore((s) => s.logout)
   const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking')
 
   useEffect(() => {
@@ -72,6 +82,31 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="border-t border-slate-200/10 p-3">
+        {/* 当前用户 */}
+        {user && (
+          <div className="mb-2 flex items-center gap-2 rounded-lg bg-slate-800/40 px-3 py-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600/20 text-xs font-medium text-blue-300">
+              {user.username.slice(0, 1).toUpperCase()}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-medium text-slate-200">{user.username}</p>
+              <p className="truncate text-[10px] text-slate-500">
+                {ROLE_LABEL[user.role] ?? user.role}
+                {user.college ? ` · ${user.college}` : ''}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                void logout()
+                navigate('/login', { replace: true })
+              }}
+              title="退出登录"
+              className="rounded p-1 text-slate-500 hover:bg-slate-700/60 hover:text-red-400 transition-colors"
+            >
+              ⎋
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-2 rounded-lg px-3 py-2">
           <span
             className={`inline-block h-2 w-2 rounded-full transition-colors ${

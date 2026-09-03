@@ -6,10 +6,26 @@ import type { PersonEntry, PersonnelLevel, ReportLevel } from '../../types'
  * token 通过 setServerToken 注入(与 settings-store 单向关联,避免循环依赖)。
  */
 
-let currentToken: string = import.meta.env.VITE_AUTH_TOKEN ?? ''
+let currentToken: string = ''
 
 export function setServerToken(token: string): void {
   currentToken = token
+}
+
+/** 401 统一处理(由 App 挂载方注册:清除会话并跳转登录)。 */
+let onUnauthorized: (() => void) | null = null
+export function setUnauthorizedHandler(fn: (() => void) | null): void {
+  onUnauthorized = fn
+}
+
+export interface AuthUser {
+  id: string
+  username: string
+  role: 'admin' | 'school' | 'college'
+  college?: string
+  disabled: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export interface ServerPersonnelDB {
@@ -67,9 +83,41 @@ class ServerApi {
       } catch {
         // keep default message
       }
+      if (res.status === 401 && !path.startsWith('/api/auth/login')) {
+        onUnauthorized?.()
+      }
       throw new Error(message)
     }
     return res.json() as Promise<T>
+  }
+
+  // ── Auth ──
+  login(username: string, password: string): Promise<{ ok: boolean; token: string; user: AuthUser }> {
+    return this.request('/api/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) })
+  }
+
+  logout(): Promise<{ ok: boolean }> {
+    return this.request('/api/auth/logout', { method: 'POST' })
+  }
+
+  me(): Promise<{ ok: boolean; user: AuthUser }> {
+    return this.request('/api/auth/me')
+  }
+
+  listUsers(): Promise<AuthUser[]> {
+    return this.request('/api/users')
+  }
+
+  createUser(input: { username: string; password: string; role: string; college?: string }): Promise<AuthUser> {
+    return this.request('/api/users', { method: 'POST', body: JSON.stringify(input) })
+  }
+
+  updateUser(id: string, patch: { role?: string; college?: string; password?: string; disabled?: boolean }): Promise<AuthUser> {
+    return this.request(`/api/users/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(patch) })
+  }
+
+  deleteUser(id: string): Promise<{ ok: boolean }> {
+    return this.request(`/api/users/${encodeURIComponent(id)}`, { method: 'DELETE' })
   }
 
   // ── Health ──

@@ -7,6 +7,7 @@ import { serverApi, setServerToken, type ServerReport } from '../lib/api/server'
 import { buildMonitorPrompt } from '../lib/monitor-prompt'
 import { DEPARTMENTS } from '../lib/departments'
 import { useSettingsStore } from '../stores/settings-store'
+import { useAuthStore } from '../stores/auth-store'
 import type { ReportLevel } from '../types'
 
 const REPORT_LEVELS: { key: ReportLevel; label: string; desc: string }[] = [
@@ -64,8 +65,15 @@ const LEVEL_BADGE: Record<ReportLevel, { bg: string; text: string; label: string
 export function MonitorPage() {
   const navigate = useNavigate()
   const settings = useSettingsStore()
-  const [reportLevel, setReportLevel] = useState<ReportLevel>('college')
-  const [dept, setDept] = useState<string>(DEPARTMENTS[0])
+  const auth = useAuthStore()
+  // 院级用户:只能运行"学院"级监控,且锁定本单位
+  const isCollege = auth.user?.role === 'college'
+  const myCollege = auth.user?.college
+  const availableLevels = isCollege
+    ? REPORT_LEVELS.filter((r) => r.key === 'college')
+    : REPORT_LEVELS
+  const [reportLevel, setReportLevel] = useState<ReportLevel>(isCollege ? 'college' : 'college')
+  const [dept, setDept] = useState<string>(isCollege && myCollege ? myCollege : DEPARTMENTS[0])
   const [timeRange, setTimeRange] = useState('最近三天')
   const [customDept, setCustomDept] = useState(false)
   const [deptInput, setDeptInput] = useState('')
@@ -86,6 +94,14 @@ export function MonitorPage() {
   const [mailError, setMailError] = useState('')
   const [mailSending, setMailSending] = useState(false)
   const [pendingMail, setPendingMail] = useState<PendingMail | null>(null)
+
+  // 院级用户锁定本单位(防止下拉被改)
+  useEffect(() => {
+    if (isCollege && myCollege) {
+      setDept(myCollege)
+      setCustomDept(false)
+    }
+  }, [isCollege, myCollege])
 
   // 报告以服务端为准,进入页面时加载
   useEffect(() => {
@@ -343,7 +359,7 @@ export function MonitorPage() {
         <div className="mb-3">
           <label className="mb-1.5 block text-xs text-slate-500">报告层级</label>
           <div className="flex gap-1">
-            {REPORT_LEVELS.map(rl => (
+            {availableLevels.map(rl => (
               <button key={rl.key} onClick={() => setReportLevel(rl.key)} disabled={running}
                 className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                   reportLevel === rl.key
@@ -354,6 +370,9 @@ export function MonitorPage() {
                 <span className="ml-1 text-xs opacity-60">{rl.desc}</span>
               </button>
             ))}
+            {isCollege && (
+              <span className="self-center text-xs text-slate-600">院级账号仅可监控本单位</span>
+            )}
           </div>
         </div>
 
@@ -370,15 +389,19 @@ export function MonitorPage() {
                     className="w-44 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none disabled:opacity-50" autoFocus />
                   <button onClick={() => setCustomDept(false)} className="text-xs text-slate-500 hover:text-slate-300">列表</button>
                 </div>
-              ) : (
-                <div className="flex gap-2 items-center">
-                  <select value={dept} onChange={e => setDept(e.target.value)} disabled={running}
-                    className="w-44 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-blue-500 focus:outline-none disabled:opacity-50">
-                    {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
-                  <button onClick={() => { setCustomDept(true); setDeptInput('') }} className="text-xs text-slate-500 hover:text-slate-300">自定义</button>
-                </div>
-              )}
+              ) : isCollege ? (
+                  <div className="w-44 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200">
+                    {myCollege ?? dept}
+                  </div>
+                ) : (
+                  <div className="flex gap-2 items-center">
+                    <select value={dept} onChange={e => setDept(e.target.value)} disabled={running}
+                      className="w-44 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-blue-500 focus:outline-none disabled:opacity-50">
+                      {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                    <button onClick={() => { setCustomDept(true); setDeptInput('') }} className="text-xs text-slate-500 hover:text-slate-300">自定义</button>
+                  </div>
+                )}
             </div>
           )}
 

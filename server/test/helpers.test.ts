@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { extractJson, errorMessageFromCli, validateMailPayload } from '../src/services/mail.js'
-import { authorized, bearerToken } from '../src/http/auth.js'
+import { bearerToken } from '../src/http/auth.js'
 import type { IncomingMessage } from 'node:http'
 
 describe('mail helpers', () => {
@@ -48,13 +48,8 @@ describe('auth', () => {
     expect(bearerToken(makeReq())).toBeNull()
   })
 
-  it('authorized 校验与常量时间比较', () => {
-    expect(authorized(makeReq('Bearer dev-token'), 'dev-token')).toBe(true)
-    expect(authorized(makeReq('Bearer wrong'), 'dev-token')).toBe(false)
-    expect(authorized(makeReq(), 'dev-token')).toBe(false)
-  })
-
-  it('expected 为空时开放', () => {
-    expect(authorized(makeReq(), '')).toBe(true)
+  it('无 Bearer 前缀视为未携带 token', () => {
+    expect(bearerToken(makeReq('Basic abc'))).toBeNull()
+    expect(bearerToken(makeReq())).toBeNull()
   })
 })
