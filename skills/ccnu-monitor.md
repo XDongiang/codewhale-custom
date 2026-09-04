@@ -41,9 +41,9 @@ allowed-tools: [exec_shell, read_file, write_file, web_search, web_fetch]
 | 微博 | `weibo` | `get_trendings` | 获取热搜榜 |
 | 微博 | `weibo` | `search_topics` | 搜索话题 |
 | 微博 | `weibo` | `search_users` | 搜索用户 |
-| 小红书 | CLI（exec_shell） | `xhs search "关键词"` | 搜索笔记 |
-| 小红书 | CLI（exec_shell） | `xhs read <id/url>` | 获取笔记详情 |
-| 小红书 | CLI（exec_shell） | `xhs comments <id>` | 查看评论 |
+| 小红书 | CLI（exec_shell） | `python3 scripts/xhs-search.py --kw "关键词" [--kw "词2"] --pages 3 --sort latest` | 翻页聚合搜索笔记(多关键词/排序/去重) |
+| 小红书 | CLI（exec_shell） | `xhs read <id/url>` | 获取单条笔记详情 |
+| 小红书 | CLI（exec_shell） | `xhs comments <id> --all` | 查看一条笔记的全部评论 |
 | 通用 | built-in | `web_search` | 搜索引擎（DuckDuckGo） |
 | 通用 | built-in | `web_fetch` | 抓取网页内容 |
 
@@ -65,7 +65,23 @@ allowed-tools: [exec_shell, read_file, write_file, web_search, web_fetch]
 
 ### 平台顺序
 1. 微博 — 搜热搜和话题（无需登录，开箱即用）
-2. 小红书 — 搜笔记（需扫码登录：`xhs login`，终端显示二维码后用小红书 App 扫码）
+2. 小红书 — 搜笔记（需扫码登录:`xhs login` 或工作台「设置 → 小红书」扫码）
+
+#### 小红书搜索必须用翻页聚合脚本(直接 xhs search 只会返回一页,必然漏结果)
+
+```bash
+# 单关键词、最新排序、翻 3 页(默认)
+python3 scripts/xhs-search.py --kw "华中师范大学 文学院"
+# 多关键词合并去重
+python3 scripts/xhs-search.py --kw "华中师范大学" --kw "桂子山 文院" --kw "华师 文学院"
+# 热门排序 / 只看视频
+python3 scripts/xhs-search.py --kw "华中师范大学" --sort popular
+python3 scripts/xhs-search.py --kw "华中师范大学" --type video
+```
+
+- 脚本输出 JSON:`results[]` 每条约含 title/url/id/author/liked_count,多关键词自动去重
+- `errors[]` 非空时逐个甄别:未登录/风控(not_authenticated / ip_blocked / verification_required)要如实写进报告,不要假称"无结果"
+- 取详情用 `xhs read "<url>"`(用结果里的 url,不要只给 id)
 
 **时间范围**：默认搜索最近 24 小时内容。如用户指定日期，按指定范围搜索。
 
@@ -124,8 +140,8 @@ allowed-tools: [exec_shell, read_file, write_file, web_search, web_fetch]
 用精确词和别名组合搜索微博，合并去重。
 
 ### 步骤 4：搜索小红书
-用 `exec_shell` 执行 `xhs search "关键词"` 搜索，对搜索结果用 `xhs read <id>` 获取详情。
-注意 `xhs search` 需要先 `xhs login` 扫码登录，否则无结果。
+用 `exec_shell` 执行 `python3 scripts/xhs-search.py --kw ... ` 翻页聚合搜索(见上),对重要结果用 `xhs read "<url>"` 获取详情。
+注意:搜索前需 `xhs login` 或工作台扫码登录;脚本 errors 中的未登录/风控错误要如实报告。
 
 ### 步骤 5：结果甄别（关键步骤）
 对每条搜索结果执行甄别：

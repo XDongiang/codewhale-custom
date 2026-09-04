@@ -187,6 +187,8 @@ $ccnu-monitor 帮我搜一下文学院今天的最新信息
 
 | 工具 | 平台 | 安装源 | 登录 |
 |---|---|---|---|
+> 小红书搜索请通过 `scripts/xhs-search.py`(翻页聚合)调用,直接 `xhs search` 只返回一页会漏结果;用法见脚本头注释与 `skills/ccnu-monitor.md`。
+|---|---|---|---|
 | `mcp-server-weibo` | 微博 | `mcp-servers/` 本地安装 | 无需 |
 | `xiaohongshu-cli` | 小红书 | `mcp-servers/` 本地安装 | 扫码 |
 

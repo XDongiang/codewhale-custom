@@ -16,7 +16,7 @@ allowed-tools: [exec_shell, read_file, write_file, web_search, web_fetch]
 | 📖 Reddit | 搜索帖子、查看子版讨论 | `rdt search`, `rdt sub` |
 | 📺 B站 | 搜索视频、提取字幕 | `bilibili search`, `bilibili transcript` |
 | 📺 YouTube | 搜索视频、提取字幕 | `youtube search`, `youtube transcript` |
-| 📕 小红书 | 搜索笔记、查看话题 | `xhs search` |
+| 📕 小红书 | 搜索笔记、查看话题 | `python3 scripts/xhs-search.py --kw "词" --pages 3`(翻页聚合,防漏) |
 | 📰 微博 | 热搜、搜索内容/用户 | `weibo search`, `weibo hot` |
 | 💬 公众号 | 搜索公众号文章 | `wechat search` |
 | 💻 V2EX | 技术社区帖子搜索 | `v2ex search` |
