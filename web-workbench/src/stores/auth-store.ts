@@ -20,6 +20,8 @@ interface AuthState {
   logout: () => Promise<void>
   /** 启动时用持久化 token 恢复会话;无效则进入 guest */
   hydrate: () => Promise<void>
+  /** 服务端暂不可达时由登录页手动重试恢复会话 */
+  retryHydrate: () => Promise<void>
   /** 401 本地登出(不调服务端,用于 token 失效场景) */
   forceLogout: () => void
 }
@@ -85,8 +87,14 @@ export const useAuthStore = create<AuthState>((set, get) => {
         localStorage.setItem(AUTH_KEY, JSON.stringify({ token: get().token, user }))
         set({ user, status: 'ready' })
       } catch {
-        clearSession()
+        // token 失效由 server.ts 的 401 处理器清会话;网络错误(服务端暂不可达)
+        // 保留 token,标记 guest,登录页检测到服务恢复后 retryHydrate 自动恢复
+        set({ status: 'guest' })
       }
+    },
+
+    retryHydrate: async () => {
+      await get().hydrate()
     },
 
     forceLogout: () => {

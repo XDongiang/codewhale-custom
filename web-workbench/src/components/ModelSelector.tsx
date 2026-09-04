@@ -38,14 +38,14 @@ export function ModelSelector({ value, onChange, disabled }: ModelSelectorProps)
       <button
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
-        className="flex items-center gap-1.5 rounded-lg border border-gray-700 bg-gray-900 px-2.5 py-1 text-xs text-gray-300 hover:border-gray-600 hover:text-gray-200 disabled:opacity-50 transition-colors"
+        className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600 hover:border-slate-300 hover:text-slate-800 disabled:opacity-50 transition-colors"
       >
         <span className="max-w-[100px] truncate">{selected.label}</span>
-        <span className="text-gray-600">{open ? '▲' : '▼'}</span>
+        <span className="text-slate-500">{open ? '▲' : '▼'}</span>
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
+        <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-lg border border-slate-200 bg-white shadow-xl">
           <div className="p-1">
             {AVAILABLE_MODELS.map((model) => (
               <button
@@ -56,12 +56,12 @@ export function ModelSelector({ value, onChange, disabled }: ModelSelectorProps)
                 }}
                 className={`flex w-full flex-col rounded-md px-3 py-2 text-left transition-colors ${
                   model.id === value
-                    ? 'bg-blue-600/20 text-blue-400'
-                    : 'text-gray-300 hover:bg-gray-800'
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >
                 <span className="text-sm font-medium">{model.label}</span>
-                <span className="text-xs text-gray-500">{model.desc}</span>
+                <span className="text-xs text-slate-400">{model.desc}</span>
               </button>
             ))}
           </div>

@@ -187,6 +187,12 @@ export async function handleRequest(
       sendJson(res, 200, runXhs(config.xhsBin, 'logout'))
       return true
     }
+    if (pathname === '/api/xhs/cancel') {
+      // 终止正在进行的扫码登录进程(前端"取消"按钮调用)
+      killQrLogin()
+      sendJson(res, 200, { ok: true })
+      return true
+    }
 
     // ── 用户管理(仅 admin) ──
     const usersMatch = matchSegments(['api', 'users'], segments)

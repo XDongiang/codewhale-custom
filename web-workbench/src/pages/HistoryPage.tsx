@@ -70,9 +70,9 @@ export function HistoryPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-200/10 px-6 py-4">
+      <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
         <div>
-          <h1 className="text-lg font-semibold text-slate-100">对话历史</h1>
+          <h1 className="text-lg font-semibold text-slate-900">对话历史</h1>
           <p className="text-xs text-slate-500 mt-0.5">
             共 {threads.length} 个对话
           </p>
@@ -80,7 +80,7 @@ export function HistoryPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => void loadThreads()}
-            className="rounded-lg px-3 py-1.5 text-sm text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 transition-colors"
+            className="rounded-lg px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
           >
             🔄 刷新
           </button>
@@ -96,9 +96,9 @@ export function HistoryPage() {
       {/* List */}
       <div className="flex-1 overflow-y-auto">
         {error && (
-          <div className="mx-6 mt-4 rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
+          <div className="mx-6 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-400">
             {error}
-            <button onClick={() => void loadThreads()} className="ml-3 underline hover:text-red-300">
+            <button onClick={() => void loadThreads()} className="ml-3 underline hover:text-red-600">
               重试
             </button>
           </div>
@@ -118,12 +118,12 @@ export function HistoryPage() {
             </button>
           </div>
         ) : (
-          <div className="divide-y divide-slate-200/5">
+          <div className="divide-y divide-slate-100">
             {threads.map((t) => (
               <div
                 key={t.id}
                 onClick={() => navigate(`/chat/${t.id}`)}
-                className="group flex cursor-pointer items-center justify-between px-6 py-3.5 hover:bg-slate-800/30 transition-colors"
+                className="group flex cursor-pointer items-center justify-between px-6 py-3.5 hover:bg-slate-100 transition-colors"
               >
                 <div className="min-w-0 flex-1">
                   {editingId === t.id ? (
@@ -137,11 +137,11 @@ export function HistoryPage() {
                       }}
                       onBlur={() => void handleSaveRename(t.id)}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-full rounded border border-blue-500 bg-slate-900 px-2 py-0.5 text-sm text-slate-200 focus:outline-none"
+                      className="w-full rounded border border-blue-500 bg-white px-2 py-0.5 text-sm text-slate-800 focus:outline-none"
                       autoFocus
                     />
                   ) : (
-                    <p className="truncate text-sm font-medium text-slate-200 group-hover:text-slate-100">
+                    <p className="truncate text-sm font-medium text-slate-800 group-hover:text-slate-900">
                       {threadLabel(t)}
                     </p>
                   )}
@@ -155,7 +155,7 @@ export function HistoryPage() {
                       e.stopPropagation()
                       handleStartRename(t)
                     }}
-                    className="rounded p-1.5 text-slate-600 hover:bg-slate-800 hover:text-blue-400 transition-colors"
+                    className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-colors"
                     title="重命名"
                   >
                     ✏️
@@ -165,7 +165,7 @@ export function HistoryPage() {
                       e.stopPropagation()
                       void handleArchive(t.id)
                     }}
-                    className="rounded p-1.5 text-slate-600 hover:bg-slate-800 hover:text-red-400 transition-colors"
+                    className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-red-400 transition-colors"
                     title="归档"
                   >
                     🗑️

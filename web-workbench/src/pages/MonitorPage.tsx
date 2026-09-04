@@ -54,12 +54,12 @@ interface PendingMail {
 }
 
 const LEVEL_BADGE: Record<ReportLevel, { bg: string; text: string; label: string }> = {
-  school: { bg: 'bg-purple-500/10', text: 'text-purple-400', label: '校级' },
-  college: { bg: 'bg-blue-500/10', text: 'text-blue-400', label: '学院' },
-  department: { bg: 'bg-teal-500/10', text: 'text-teal-400', label: '专业' },
-  class: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', label: '班级' },
-  course: { bg: 'bg-rose-500/10', text: 'text-rose-400', label: '课程' },
-  individual: { bg: 'bg-amber-500/10', text: 'text-amber-400', label: '个人' },
+  school: { bg: 'bg-purple-50', text: 'text-purple-600', label: '校级' },
+  college: { bg: 'bg-blue-500/10', text: 'text-blue-600', label: '学院' },
+  department: { bg: 'bg-teal-50', text: 'text-teal-600', label: '专业' },
+  class: { bg: 'bg-emerald-50', text: 'text-emerald-600', label: '班级' },
+  course: { bg: 'bg-rose-50', text: 'text-rose-600', label: '课程' },
+  individual: { bg: 'bg-amber-50', text: 'text-amber-600', label: '个人' },
 }
 
 export function MonitorPage() {
@@ -349,12 +349,12 @@ export function MonitorPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center border-b border-slate-200/10 px-6 py-4">
-        <h1 className="text-lg font-semibold text-slate-100">舆情监控</h1>
+      <div className="flex items-center border-b border-slate-200 px-6 py-4">
+        <h1 className="text-lg font-semibold text-slate-900">舆情监控</h1>
       </div>
 
       {/* Controls */}
-      <div className="border-b border-slate-200/10 px-6 py-4">
+      <div className="border-b border-slate-200 px-6 py-4">
         {/* Report level selector */}
         <div className="mb-3">
           <label className="mb-1.5 block text-xs text-slate-500">报告层级</label>
@@ -363,15 +363,15 @@ export function MonitorPage() {
               <button key={rl.key} onClick={() => setReportLevel(rl.key)} disabled={running}
                 className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                   reportLevel === rl.key
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/10'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                 } disabled:opacity-50`}>
                 {rl.label}
                 <span className="ml-1 text-xs opacity-60">{rl.desc}</span>
               </button>
             ))}
             {isCollege && (
-              <span className="self-center text-xs text-slate-600">院级账号仅可监控本单位</span>
+              <span className="self-center text-xs text-slate-500">院级账号仅可监控本单位</span>
             )}
           </div>
         </div>
@@ -386,20 +386,20 @@ export function MonitorPage() {
                 <div className="flex gap-2">
                   <input type="text" value={deptInput} onChange={e => setDeptInput(e.target.value)}
                     placeholder="输入名称" disabled={running}
-                    className="w-44 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none disabled:opacity-50" autoFocus />
-                  <button onClick={() => setCustomDept(false)} className="text-xs text-slate-500 hover:text-slate-300">列表</button>
+                    className="w-44 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none disabled:opacity-50" autoFocus />
+                  <button onClick={() => setCustomDept(false)} className="text-xs text-slate-500 hover:text-slate-600">列表</button>
                 </div>
               ) : isCollege ? (
-                  <div className="w-44 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200">
+                  <div className="w-44 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800">
                     {myCollege ?? dept}
                   </div>
                 ) : (
                   <div className="flex gap-2 items-center">
                     <select value={dept} onChange={e => setDept(e.target.value)} disabled={running}
-                      className="w-44 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 focus:border-blue-500 focus:outline-none disabled:opacity-50">
+                      className="w-44 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none disabled:opacity-50">
                       {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
-                    <button onClick={() => { setCustomDept(true); setDeptInput('') }} className="text-xs text-slate-500 hover:text-slate-300">自定义</button>
+                    <button onClick={() => { setCustomDept(true); setDeptInput('') }} className="text-xs text-slate-500 hover:text-slate-600">自定义</button>
                   </div>
                 )}
             </div>
@@ -407,10 +407,10 @@ export function MonitorPage() {
 
           {/* School level: info */}
           {reportLevel === 'school' && (
-            <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 px-4 py-2 text-sm text-slate-300">
+            <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 px-4 py-2 text-sm text-slate-600">
               覆盖全校 {DEPARTMENTS.length} 个学院/部门
               {settings.personnel.filter(p => p.level === 'school').length > 0 && (
-                <span className="ml-2 text-purple-400">
+                <span className="ml-2 text-purple-600">
                   · 校级名单 {settings.personnel.filter(p => p.level === 'school').length} 人
                 </span>
               )}
@@ -424,8 +424,8 @@ export function MonitorPage() {
               <input type="text" value={deptScope} onChange={e => setDeptScope(e.target.value)}
                 placeholder="如：汉语言文学、计算机科学系"
                 disabled={running}
-                className="w-56 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none disabled:opacity-50" />
-              <p className="mt-1 text-xs text-slate-600">输入具体专业或系部名称</p>
+                className="w-56 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none disabled:opacity-50" />
+              <p className="mt-1 text-xs text-slate-500">输入具体专业或系部名称</p>
             </div>
           )}
 
@@ -436,8 +436,8 @@ export function MonitorPage() {
               <input type="text" value={classScope} onChange={e => setClassScope(e.target.value)}
                 placeholder="如：2024级汉语言文学1班"
                 disabled={running}
-                className="w-56 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none disabled:opacity-50" />
-              <p className="mt-1 text-xs text-slate-600">输入具体班级名称</p>
+                className="w-56 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none disabled:opacity-50" />
+              <p className="mt-1 text-xs text-slate-500">输入具体班级名称</p>
             </div>
           )}
 
@@ -448,8 +448,8 @@ export function MonitorPage() {
               <input type="text" value={courseScope} onChange={e => setCourseScope(e.target.value)}
                 placeholder="如：高等数学、大学英语"
                 disabled={running}
-                className="w-56 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none disabled:opacity-50" />
-              <p className="mt-1 text-xs text-slate-600">输入课程名，系统将搜索该课程的舆情</p>
+                className="w-56 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none disabled:opacity-50" />
+              <p className="mt-1 text-xs text-slate-500">输入课程名，系统将搜索该课程的舆情</p>
             </div>
           )}
 
@@ -458,21 +458,21 @@ export function MonitorPage() {
             <div>
               <label className="mb-1 block text-xs text-slate-500">选择监控对象</label>
               {allPersonnel.length === 0 ? (
-                <p className="text-sm text-slate-600">请先在设置 → 人员名单中添加人员</p>
+                <p className="text-sm text-slate-500">请先在设置 → 人员名单中添加人员</p>
               ) : (
                 <div className="flex flex-col gap-1">
                   <input type="text" value={personSearch} onChange={e => { setPersonSearch(e.target.value); setSelectedPersonId('') }}
                     placeholder="搜索姓名、学院、职务..."
                     disabled={running}
-                    className="w-56 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none disabled:opacity-50" />
-                  <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-700/50 bg-slate-900/50">
+                    className="w-56 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none disabled:opacity-50" />
+                  <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-200 bg-white">
                     {filteredPersons.slice(0, 30).map(p => (
                       <button key={p.id}
                         onClick={() => { setSelectedPersonId(p.id); setPersonSearch(p.name) }}
                         className={`w-full px-3 py-1.5 text-left text-sm transition-colors ${
                           selectedPersonId === p.id
-                            ? 'bg-blue-600/20 text-blue-300'
-                            : 'text-slate-300 hover:bg-slate-800'
+                            ? 'bg-blue-50 text-blue-600'
+                            : 'text-slate-600 hover:bg-slate-100'
                         }`}>
                         <span className="font-medium">{p.name}</span>
                         {p.college && <span className="ml-1.5 text-xs text-slate-500">{p.college}</span>}
@@ -481,7 +481,7 @@ export function MonitorPage() {
                       </button>
                     ))}
                     {filteredPersons.length === 0 && personSearch && (
-                      <p className="px-3 py-2 text-xs text-slate-600">无匹配人员</p>
+                      <p className="px-3 py-2 text-xs text-slate-500">无匹配人员</p>
                     )}
                   </div>
                 </div>
@@ -495,7 +495,7 @@ export function MonitorPage() {
             <div className="flex gap-1">
               {TIME_RANGES.map(t => (
                 <button key={t.value} onClick={() => setTimeRange(t.value)} disabled={running}
-                  className={`rounded-lg px-3 py-2 text-sm transition-colors ${timeRange === t.value ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'} disabled:opacity-50`}>
+                  className={`rounded-lg px-3 py-2 text-sm transition-colors ${timeRange === t.value ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'} disabled:opacity-50`}>
                   {t.label}
                 </button>
               ))}
@@ -503,30 +503,30 @@ export function MonitorPage() {
           </div>
 
           <button onClick={handleRun} disabled={!canRun}
-            className="rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2 text-sm font-medium text-white hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 transition-all shadow-lg shadow-blue-600/20">
+            className="rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2 text-sm font-medium text-white hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 transition-all shadow-lg shadow-blue-600/10">
             {running ? '监控中...' : '🔍 开始监控'}
           </button>
           {running && (
             <button onClick={handleStop}
-              className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-400 hover:bg-red-500/20 transition-colors">停止</button>
+              className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-400 hover:bg-red-500/20 transition-colors">停止</button>
           )}
         </div>
 
         {/* Summary line */}
         {reportLevel !== 'school' && !running && (
-          <p className="mt-2 text-xs text-slate-600">
-            将对 <span className="text-slate-400">{getReportLabel()}</span> 进行舆情监控
+          <p className="mt-2 text-xs text-slate-500">
+            将对 <span className="text-slate-500">{getReportLabel()}</span> 进行舆情监控
           </p>
         )}
 
         {/* Email recipient */}
-        <div className="mt-4 max-w-xl rounded-lg border border-slate-700/70 bg-slate-900/50 p-3">
-          <label className="mb-1.5 block text-xs font-medium text-slate-400">报告收件邮箱（可选）</label>
+        <div className="mt-4 max-w-xl rounded-lg border border-slate-200 bg-white p-3">
+          <label className="mb-1.5 block text-xs font-medium text-slate-500">报告收件邮箱（可选）</label>
           <input type="email" value={recipientEmail} onChange={e => handleRecipientChange(e.target.value)}
             placeholder="输入邮箱，报告生成后会准备发送"
             disabled={running}
-            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none disabled:opacity-50" />
-          <p className="mt-1.5 text-xs text-slate-600">填写后，报告生成完成会显示邮件摘要，需要点击确认才会发送。</p>
+            className="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none disabled:opacity-50" />
+          <p className="mt-1.5 text-xs text-slate-500">填写后，报告生成完成会显示邮件摘要，需要点击确认才会发送。</p>
         </div>
       </div>
 
@@ -535,33 +535,33 @@ export function MonitorPage() {
         {/* Running spinner */}
         {running && (
           <div className="flex flex-col items-center justify-center py-16">
-            <div className="w-10 h-10 rounded-full border-4 border-slate-700 border-t-blue-500 animate-spin mb-3" />
-            <p className="text-sm text-slate-400">搜索微博、小红书中...</p>
+            <div className="w-10 h-10 rounded-full border-4 border-slate-300 border-t-blue-500 animate-spin mb-3" />
+            <p className="text-sm text-slate-500">搜索微博、小红书中...</p>
           </div>
         )}
 
         {/* Error */}
         {error && !running && (
-          <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-5 mb-4">
+          <div className="rounded-xl border border-red-200 bg-red-50 p-5 mb-4">
             <p className="text-sm text-red-400">{error}</p>
-            <button onClick={handleRun} className="mt-2 text-xs text-slate-500 hover:text-slate-300">重试</button>
+            <button onClick={handleRun} className="mt-2 text-xs text-slate-500 hover:text-slate-600">重试</button>
           </div>
         )}
 
         {(mailStatus || mailError || pendingMail) && !running && (
           <div className={`mb-4 rounded-xl border p-4 ${
             mailError
-              ? 'border-red-500/20 bg-red-500/5'
-              : 'border-blue-500/20 bg-blue-500/5'
+              ? 'border-red-200 bg-red-50'
+              : 'border-blue-200 bg-blue-50'
           }`}>
             {mailError ? (
               <p className="text-sm text-red-400">{mailError}</p>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-blue-300">{mailStatus}</p>
+                <p className="text-sm text-blue-600">{mailStatus}</p>
                 {pendingMail && (
                   <div className="space-y-2">
-                    <div className="rounded-lg border border-slate-700/70 bg-slate-950/40 px-3 py-2 text-xs text-slate-400">
+                    <div className="rounded-lg border border-slate-200 bg-white/70 px-3 py-2 text-xs text-slate-500">
                       <p>收件人：{pendingMail.summary?.to?.join(', ') || pendingMail.recipient}</p>
                       <p>主题：{pendingMail.summary?.subject || pendingMail.subject}</p>
                       {pendingMail.summary?.from && <p>发件人：{pendingMail.summary.from}</p>}
@@ -580,8 +580,8 @@ export function MonitorPage() {
 
         {/* Current report (just generated) */}
         {report && !running && !expandedId && (
-          <div className="rounded-xl border border-slate-200/10 bg-slate-900/50 p-5 mb-4">
-            <div className="prose-stream text-sm text-slate-300">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 mb-4">
+            <div className="prose-stream text-sm text-slate-600">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{report}</ReactMarkdown>
             </div>
           </div>
@@ -590,22 +590,22 @@ export function MonitorPage() {
         {/* Saved reports */}
         {savedReports.length > 0 && (
           <div className="space-y-3">
-            <h3 className="text-sm font-medium text-slate-300">历史报告</h3>
+            <h3 className="text-sm font-medium text-slate-600">历史报告</h3>
             {savedReports.map((r) => {
               const badge = LEVEL_BADGE[r.level] || LEVEL_BADGE.college
               return (
-                <div key={r.id} className="rounded-xl border border-slate-200/10 bg-slate-900/30 overflow-hidden">
+                <div key={r.id} className="rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
                   {/* Card header */}
                   <button
                     onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-800/30 transition-colors text-left"
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-100 transition-colors text-left"
                   >
                     <div className="min-w-0 flex items-center gap-2">
                       <span className={`inline-block rounded-md border px-1.5 py-0.5 text-xs font-medium ${badge.bg} ${badge.text} border-current/20`}>
                         {badge.label}
                       </span>
                       <div>
-                        <p className="text-sm text-slate-300 font-medium truncate">
+                        <p className="text-sm text-slate-600 font-medium truncate">
                           {r.dept}
                         </p>
                         <p className="text-xs text-slate-500 mt-0.5">
@@ -615,21 +615,21 @@ export function MonitorPage() {
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-2">
                       <button onClick={(e) => { e.stopPropagation(); navigate(`/chat/${r.threadId}`) }}
-                        className="text-xs text-slate-600 hover:text-blue-400 px-2 py-1 rounded transition-colors"
+                        className="text-xs text-slate-500 hover:text-blue-600 px-2 py-1 rounded transition-colors"
                         title="查看原始对话">💬</button>
                       <button onClick={(e) => { e.stopPropagation(); void sendReportMail(r) }}
                         disabled={!normalizedRecipient || mailSending}
-                        className="text-xs text-slate-600 hover:text-emerald-400 disabled:opacity-30 px-2 py-1 rounded transition-colors"
+                        className="text-xs text-slate-500 hover:text-emerald-600 disabled:opacity-30 px-2 py-1 rounded transition-colors"
                         title="发送到收件邮箱">✉️</button>
                       <button onClick={(e) => { e.stopPropagation(); deleteReport(r.id) }}
-                        className="text-xs text-slate-600 hover:text-red-400 px-2 py-1 rounded transition-colors"
+                        className="text-xs text-slate-500 hover:text-red-400 px-2 py-1 rounded transition-colors"
                         title="删除">🗑️</button>
-                      <span className="text-xs text-slate-600">{expandedId === r.id ? '▲' : '▼'}</span>
+                      <span className="text-xs text-slate-500">{expandedId === r.id ? '▲' : '▼'}</span>
                     </div>
                   </button>
                   {/* Expanded content */}
                   {expandedId === r.id && (
-                    <div className="border-t border-slate-200/10 px-4 py-4 prose-stream text-sm text-slate-300">
+                    <div className="border-t border-slate-200 px-4 py-4 prose-stream text-sm text-slate-600">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{r.content}</ReactMarkdown>
                     </div>
                   )}
@@ -641,7 +641,7 @@ export function MonitorPage() {
 
         {/* Empty */}
         {!running && !error && !report && savedReports.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-600">
+          <div className="flex flex-col items-center justify-center py-16 text-slate-500">
             <span className="text-4xl mb-3">📊</span>
             <p className="text-sm">选择报告层级和参数，点击「开始监控」</p>
           </div>

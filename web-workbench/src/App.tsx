@@ -17,7 +17,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
 
   if (status === 'loading') {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-slate-950 text-sm text-slate-500">
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-50 text-sm text-slate-500">
         正在恢复会话...
       </div>
     )

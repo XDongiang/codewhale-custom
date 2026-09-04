@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-slate-950 text-slate-200 antialiased;
+    @apply bg-slate-50 text-slate-800 antialiased;
   }
 
   /* Selection color */
@@ -22,7 +22,7 @@
   @apply bg-transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply rounded-full bg-slate-700 hover:bg-slate-600;
+  @apply rounded-full bg-slate-300 hover:bg-slate-400;
 }
 
 /* ── Markdown prose styles ── */
@@ -30,13 +30,13 @@
   @apply mb-2 leading-relaxed last:mb-0;
 }
 .prose-stream pre {
-  @apply my-3 rounded-xl border border-slate-700/50 bg-slate-900 p-4 overflow-x-auto;
+  @apply my-3 rounded-xl border border-slate-200 bg-slate-50 p-4 overflow-x-auto;
 }
 .prose-stream pre code {
-  @apply bg-transparent p-0 text-sm text-slate-200;
+  @apply bg-transparent p-0 text-sm text-slate-700;
 }
 .prose-stream code {
-  @apply rounded-md bg-slate-800 px-1.5 py-0.5 text-sm font-mono text-emerald-400;
+  @apply rounded-md bg-slate-100 px-1.5 py-0.5 text-sm font-mono text-blue-700;
 }
 .prose-stream ul {
   @apply mb-2 list-disc pl-5 space-y-0.5;
@@ -48,28 +48,28 @@
   @apply leading-relaxed;
 }
 .prose-stream table {
-  @apply my-3 w-full border-separate border-spacing-0 overflow-hidden rounded-lg border border-slate-700/50;
+  @apply my-3 w-full border-separate border-spacing-0 overflow-hidden rounded-lg border border-slate-200;
 }
 .prose-stream th {
-  @apply border-b border-slate-700/50 bg-slate-900 px-4 py-2 text-left text-sm font-medium text-slate-300;
+  @apply border-b border-slate-200 bg-slate-100 px-4 py-2 text-left text-sm font-medium text-slate-700;
 }
 .prose-stream td {
-  @apply border-b border-slate-700/30 px-4 py-2 text-sm text-slate-400;
+  @apply border-b border-slate-100 px-4 py-2 text-sm text-slate-600;
 }
 .prose-stream blockquote {
-  @apply my-3 border-l-2 border-blue-500/50 bg-blue-500/5 pl-4 py-2 italic text-slate-400 rounded-r-lg;
+  @apply my-3 border-l-2 border-blue-500/50 bg-blue-50 pl-4 py-2 italic text-slate-600 rounded-r-lg;
 }
 .prose-stream hr {
-  @apply my-4 border-slate-700/50;
+  @apply my-4 border-slate-200;
 }
 .prose-stream a {
-  @apply text-blue-400 underline decoration-blue-400/30 hover:decoration-blue-400 transition-colors;
+  @apply text-blue-600 underline decoration-blue-300/50 hover:decoration-blue-600 transition-colors;
 }
 .prose-stream strong {
-  @apply font-semibold text-slate-100;
+  @apply font-semibold text-slate-900;
 }
 .prose-stream h1, .prose-stream h2, .prose-stream h3, .prose-stream h4 {
-  @apply font-semibold text-slate-100 mt-4 mb-2;
+  @apply font-semibold text-slate-900 mt-4 mb-2;
 }
 .prose-stream h1 { @apply text-lg; }
 .prose-stream h2 { @apply text-base; }
@@ -78,7 +78,7 @@
 /* ── SSE streaming cursor ── */
 .cursor-blink::after {
   content: '▊';
-  @apply ml-0.5 text-blue-400;
+  @apply ml-0.5 text-blue-600;
   animation: blink 1s step-end infinite;
 }
 @keyframes blink {
@@ -87,7 +87,7 @@
 
 /* ── Input focus glow ── */
 input:focus-visible {
-  box-shadow: 0 0 0 2px theme('colors.blue.500/30');
+  box-shadow: 0 0 0 2px theme('colors.blue.500/20');
 }
 
 /* ── Button transitions (reduced for VSCode webview performance) ── */

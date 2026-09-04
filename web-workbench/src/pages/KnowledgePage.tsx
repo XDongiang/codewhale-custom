@@ -17,13 +17,13 @@ export function KnowledgePage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center border-b border-slate-200/10 px-6 py-4">
-        <h1 className="text-lg font-semibold text-slate-100">📚 文件知识库</h1>
+      <div className="flex items-center border-b border-slate-200 px-6 py-4">
+        <h1 className="text-lg font-semibold text-slate-900">📚 文件知识库</h1>
         <div className="ml-6 flex gap-1">
           <button
             onClick={() => setTab('ask')}
             className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
-              tab === 'ask' ? 'bg-blue-600/20 text-blue-300' : 'text-slate-500 hover:text-slate-300'
+              tab === 'ask' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-600'
             }`}
           >
             智能问答
@@ -31,7 +31,7 @@ export function KnowledgePage() {
           <button
             onClick={() => setTab('files')}
             className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
-              tab === 'files' ? 'bg-blue-600/20 text-blue-300' : 'text-slate-500 hover:text-slate-300'
+              tab === 'files' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:text-slate-600'
             }`}
           >
             文件库
@@ -70,8 +70,8 @@ function AskTab() {
 
   return (
     <div className="mx-auto max-w-3xl p-6">
-      <div className="rounded-xl border border-slate-200/10 bg-slate-900/50 p-4">
-        <label className="mb-2 block text-sm font-medium text-slate-300">
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <label className="mb-2 block text-sm font-medium text-slate-600">
           向已导入的文件提问
         </label>
         <textarea
@@ -82,10 +82,10 @@ function AskTab() {
           }}
           placeholder="例如:差旅费报销需要提供哪些材料?审批流程是怎样的?"
           rows={3}
-          className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm text-slate-200 placeholder-slate-600 focus:border-blue-500 focus:outline-none transition-colors"
+          className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none transition-colors"
         />
         <div className="mt-2 flex items-center justify-between">
-          <p className="text-xs text-slate-600">仅依据已导入文件作答,并标注出处(⌘/Ctrl+Enter 发送)</p>
+          <p className="text-xs text-slate-500">仅依据已导入文件作答,并标注出处(⌘/Ctrl+Enter 发送)</p>
           <button
             onClick={() => void handleAsk()}
             disabled={running || !question.trim()}
@@ -97,7 +97,7 @@ function AskTab() {
       </div>
 
       {error && (
-        <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
+        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-400">
           {error}
         </div>
       )}
@@ -111,17 +111,17 @@ function AskTab() {
 
       {result && !running && (
         <div className="mt-6 space-y-4">
-          <div className="prose-stream rounded-xl border border-slate-200/10 bg-slate-900/50 p-5 text-sm text-slate-300">
+          <div className="prose-stream rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{result.answer}</ReactMarkdown>
           </div>
           {result.sources.length > 0 && (
-            <div className="rounded-xl border border-slate-200/10 bg-slate-900/30 p-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <p className="mb-2 text-xs font-medium text-slate-500">依据文件</p>
               <ul className="space-y-1">
                 {result.sources.map((s, i) => (
-                  <li key={i} className="text-xs text-slate-400">
+                  <li key={i} className="text-xs text-slate-500">
                     «{s.filename}»{s.college ? ` · ${s.college}` : ' · 全校'}
-                    <span className="ml-1 text-slate-600">({s.chunks} 段)</span>
+                    <span className="ml-1 text-slate-500">({s.chunks} 段)</span>
                   </li>
                 ))}
               </ul>
@@ -191,18 +191,18 @@ function FilesTab({ isAdmin }: { isAdmin: boolean }) {
   return (
     <div className="mx-auto max-w-3xl p-6 space-y-4">
       {error && (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">{error}</div>
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-400">{error}</div>
       )}
 
       {isAdmin && (
-        <div className="rounded-xl border border-slate-200/10 bg-slate-900/50 p-4">
-          <h3 className="mb-3 text-sm font-medium text-slate-300">上传文件(文本 / PDF)</h3>
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <h3 className="mb-3 text-sm font-medium text-slate-600">上传文件(文本 / PDF)</h3>
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex gap-1 rounded-lg bg-slate-800 p-0.5">
+            <div className="flex gap-1 rounded-lg bg-slate-100 p-0.5">
               {(['school', 'college'] as const).map((s) => (
                 <button key={s} onClick={() => setScope(s)}
                   className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                    scope === s ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                    scope === s ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-800'
                   }`}>
                   {s === 'school' ? '全校文件' : '学院文件'}
                 </button>
@@ -210,7 +210,7 @@ function FilesTab({ isAdmin }: { isAdmin: boolean }) {
             </div>
             {scope === 'college' && (
               <select value={college} onChange={(e) => setCollege(e.target.value)}
-                className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 focus:border-blue-500 focus:outline-none">
+                className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs text-slate-800 focus:border-blue-500 focus:outline-none">
                 {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
               </select>
             )}
@@ -220,29 +220,29 @@ function FilesTab({ isAdmin }: { isAdmin: boolean }) {
               {busy ? '解析上传中...' : '⬆ 选择文件'}
             </button>
           </div>
-          <p className="mt-2 text-xs text-slate-600">
+          <p className="mt-2 text-xs text-slate-500">
             支持 .pdf(文本型)/.txt/.md;扫描版 PDF 无文字层无法入库,请先 OCR(后续支持)。
           </p>
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-200/10 overflow-hidden">
-        <div className="border-b border-slate-200/5 bg-slate-900/50 px-4 py-2.5 text-xs text-slate-500">
+      <div className="rounded-xl border border-slate-200 overflow-hidden">
+        <div className="border-b border-slate-100 bg-white px-4 py-2.5 text-xs text-slate-500">
           {loading ? '加载中...' : `共 ${docs.length} 个文件`}
         </div>
         {!loading && docs.length === 0 && (
-          <div className="px-4 py-10 text-center text-sm text-slate-600">
+          <div className="px-4 py-10 text-center text-sm text-slate-500">
             还没有导入任何文件
             {isAdmin ? ',上传后即可问答' : ',请等待管理员导入'}
           </div>
         )}
         <table className="w-full text-sm">
-          <tbody className="divide-y divide-slate-200/5">
+          <tbody className="divide-y divide-slate-100">
             {docs.map((d) => (
-              <tr key={d.id} className="text-slate-400 hover:bg-slate-800/30">
+              <tr key={d.id} className="text-slate-500 hover:bg-slate-100">
                 <td className="px-4 py-2.5">
-                  <p className="text-slate-200 font-medium">{d.filename}</p>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-slate-800 font-medium">{d.filename}</p>
+                  <p className="text-xs text-slate-500">
                     {d.scope === 'school' ? '全校' : d.college} · 上传者 {d.uploadedBy} ·{' '}
                     {new Date(d.uploadedAt).toLocaleString('zh-CN')} · {d.charCount} 字 · {d.chunkCount} 段
                   </p>
@@ -250,7 +250,7 @@ function FilesTab({ isAdmin }: { isAdmin: boolean }) {
                 <td className="px-4 py-2.5 text-right">
                   {isAdmin && (
                     <button onClick={() => void handleDelete(d.id, d.filename)}
-                      className="text-xs text-slate-600 hover:text-red-400 transition-colors">
+                      className="text-xs text-slate-500 hover:text-red-400 transition-colors">
                       删除
                     </button>
                   )}

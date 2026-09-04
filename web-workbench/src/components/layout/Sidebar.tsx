@@ -43,13 +43,13 @@ export function Sidebar() {
   }, [settings])
 
   return (
-    <aside className="flex h-full w-56 flex-col border-r border-slate-200/10 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950">
+    <aside className="flex h-full w-56 flex-col border-r border-slate-200 bg-gradient-to-b from-white via-white to-slate-50">
       {/* Logo */}
-      <div className="flex items-center gap-3 border-b border-slate-200/10 px-4 py-4">
+      <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-4">
         {/* CCNU Logo */}
-        <img src="/ccnulogo.png" alt="华中师范大学" className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-slate-200/20" />
+        <img src="/ccnulogo.png" alt="华中师范大学" className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-slate-300/40" />
         <div className="min-w-0">
-          <h1 className="text-sm font-semibold text-slate-100 tracking-wide">华师 AI 工作台</h1>
+          <h1 className="text-sm font-semibold text-slate-900 tracking-wide">华师 AI 工作台</h1>
           <p className="text-[10px] text-slate-500">华中师范大学</p>
         </div>
       </div>
@@ -67,8 +67,8 @@ export function Sidebar() {
               to={item.to}
               className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-all duration-200 ${
                 active
-                  ? 'bg-blue-600/10 text-blue-400 font-medium shadow-sm shadow-blue-500/5'
-                  : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+                  ? 'bg-blue-600/10 text-blue-600 font-medium shadow-sm shadow-blue-500/5'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
               }`}
             >
               <span className="text-base">{item.icon}</span>
@@ -82,15 +82,15 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-slate-200/10 p-3">
+      <div className="border-t border-slate-200 p-3">
         {/* 当前用户 */}
         {user && (
-          <div className="mb-2 flex items-center gap-2 rounded-lg bg-slate-800/40 px-3 py-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600/20 text-xs font-medium text-blue-300">
+          <div className="mb-2 flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-medium text-blue-600">
               {user.username.slice(0, 1).toUpperCase()}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-medium text-slate-200">{user.username}</p>
+              <p className="truncate text-xs font-medium text-slate-800">{user.username}</p>
               <p className="truncate text-[10px] text-slate-500">
                 {ROLE_LABEL[user.role] ?? user.role}
                 {user.college ? ` · ${user.college}` : ''}
@@ -102,7 +102,7 @@ export function Sidebar() {
                 navigate('/login', { replace: true })
               }}
               title="退出登录"
-              className="rounded p-1 text-slate-500 hover:bg-slate-700/60 hover:text-red-400 transition-colors"
+              className="rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-red-400 transition-colors"
             >
               ⎋
             </button>

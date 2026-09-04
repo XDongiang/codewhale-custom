@@ -156,20 +156,20 @@ export function SettingsPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center border-b border-slate-200/10 px-6 py-4">
-        <h1 className="text-lg font-semibold text-slate-100">设置</h1>
+      <div className="flex items-center border-b border-slate-200 px-6 py-4">
+        <h1 className="text-lg font-semibold text-slate-900">设置</h1>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-slate-200/10 px-6">
+      <div className="flex gap-1 border-b border-slate-200 px-6">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
               tab === t.key
-                ? 'border-blue-500 text-blue-400'
-                : 'border-transparent text-slate-500 hover:text-slate-300'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-slate-500 hover:text-slate-600'
             }`}
           >
             {t.label}
@@ -202,7 +202,7 @@ export function SettingsPage() {
               <p className="mb-3 text-xs text-slate-500">名单加载中...</p>
             )}
             {settings.personnelStatus === 'error' && (
-              <div className="mb-3 rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-2 text-xs text-red-400">
+              <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-xs text-red-400">
                 名单加载失败:{settings.personnelError ?? '未知错误'}。请检查服务端连接后刷新页面。
               </div>
             )}
@@ -223,8 +223,8 @@ export function SettingsPage() {
 
         {/* 数据备份(仅管理员) */}
         {isAdmin && (
-          <div className="mt-8 border-t border-slate-200/10 pt-6">
-            <h2 className="text-sm font-medium text-slate-300 mb-3">数据备份</h2>
+          <div className="mt-8 border-t border-slate-200 pt-6">
+            <h2 className="text-sm font-medium text-slate-600 mb-3">数据备份</h2>
             <BackupSection />
           </div>
         )}
@@ -280,7 +280,7 @@ function BackupSection() {
   }
 
   return (
-    <div className="max-w-lg rounded-xl border border-slate-200/10 bg-slate-900/50 p-4">
+    <div className="max-w-lg rounded-xl border border-slate-200 bg-white p-4">
       <p className="mb-3 text-xs text-slate-500">
         导出服务器上的全部名单与报告为 JSON 文件;还原时整体替换。迁移或误删后可用此功能恢复。
       </p>
@@ -288,21 +288,21 @@ function BackupSection() {
         <button
           onClick={() => void handleExport()}
           disabled={busy}
-          className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 disabled:opacity-50 transition-colors"
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-50 transition-colors"
         >
           {busy ? '处理中...' : '⬇ 导出备份'}
         </button>
         <button
           onClick={() => fileRef.current?.click()}
           disabled={busy}
-          className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 disabled:opacity-50 transition-colors"
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-50 transition-colors"
         >
           ⬆ 还原备份
         </button>
         <input ref={fileRef} type="file" accept=".json" onChange={(e) => void handleRestoreFile(e)} className="hidden" />
       </div>
       {msg && (
-        <p className={`mt-3 text-xs ${msg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{msg.text}</p>
+        <p className={`mt-3 text-xs ${msg.ok ? 'text-emerald-600' : 'text-red-400'}`}>{msg.text}</p>
       )}
     </div>
   )
@@ -328,34 +328,34 @@ function ConnectionTab({
   return (
     <div className="max-w-lg space-y-5">
       {/* 当前登录用户 */}
-      <div className="rounded-xl border border-slate-200/10 bg-slate-900/50 p-4">
-        <label className="mb-2.5 block text-sm font-medium text-slate-300">当前登录</label>
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <label className="mb-2.5 block text-sm font-medium text-slate-600">当前登录</label>
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600/20 text-sm font-semibold text-blue-300">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-sm font-semibold text-blue-600">
             {user?.username.slice(0, 1).toUpperCase() ?? '?'}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-slate-200">{user?.username}</p>
+            <p className="text-sm font-medium text-slate-800">{user?.username}</p>
             <p className="text-xs text-slate-500">
               {user ? `${ROLE_LABELS[user.role] ?? user.role}${user.college ? ` · ${user.college}` : ''}` : '未登录'}
             </p>
           </div>
           <button
             onClick={() => void onLogout()}
-            className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-800 hover:text-red-400 transition-colors"
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-red-400 transition-colors"
           >
             退出登录
           </button>
         </div>
-        <p className="mt-2.5 text-xs text-slate-600">角色与可见范围由管理员在「用户管理」中分配,此处无需手动配置令牌。</p>
+        <p className="mt-2.5 text-xs text-slate-500">角色与可见范围由管理员在「用户管理」中分配,此处无需手动配置令牌。</p>
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-slate-300">运行时 API 地址</label>
+        <label className="mb-1.5 block text-sm font-medium text-slate-600">运行时 API 地址</label>
         <input type="text" value={apiUrl} onChange={(e) => onApiUrlChange(e.target.value)}
           placeholder="/runtime-api"
-          className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none transition-colors" />
-        <p className="mt-1.5 text-xs text-slate-500">一般保持默认(<code className="text-slate-400">/runtime-api</code>),由服务器代理到 CodeWhale Runtime</p>
+          className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none transition-colors" />
+        <p className="mt-1.5 text-xs text-slate-500">一般保持默认(<code className="text-slate-500">/runtime-api</code>),由服务器代理到 CodeWhale Runtime</p>
       </div>
       <div className="flex gap-3">
         <button onClick={onSave}
@@ -363,14 +363,14 @@ function ConnectionTab({
           {saved ? '✓ 已保存' : '保存'}
         </button>
         <button onClick={() => void onTest()} disabled={testing}
-          className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-2.5 text-sm text-slate-300 hover:bg-slate-800 disabled:opacity-50 transition-colors">
+          className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-50 transition-colors">
           {testing ? '检测中...' : '测试连接'}
         </button>
       </div>
       {testResult && (
         <div className={`rounded-xl border px-4 py-3 text-sm ${
-          testResult.ok ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400'
-            : 'border-red-500/20 bg-red-500/5 text-red-400'}`}>
+          testResult.ok ? 'border-emerald-200 bg-emerald-500/5 text-emerald-600'
+            : 'border-red-200 bg-red-50 text-red-400'}`}>
           {testResult.msg}
         </div>
       )}
@@ -578,12 +578,12 @@ function PersonnelTab({
 
   const LevelBadge = ({ level }: { level: PersonnelLevel }) => {
     const colors: Record<PersonnelLevel, string> = {
-      school: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
-      college: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-      department: 'bg-teal-500/15 text-teal-400 border-teal-500/30',
-      class: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-      course: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
-      individual: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
+      school: 'bg-purple-500/15 text-purple-600 border-purple-500/30',
+      college: 'bg-blue-500/15 text-blue-600 border-blue-500/30',
+      department: 'bg-teal-500/15 text-teal-600 border-teal-500/30',
+      class: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30',
+      course: 'bg-rose-500/15 text-rose-600 border-rose-500/30',
+      individual: 'bg-slate-500/15 text-slate-500 border-slate-500/30',
     }
     return (
       <span className={`inline-block rounded-md border px-1.5 py-0.5 text-xs font-medium ${colors[level]}`}>
@@ -598,12 +598,12 @@ function PersonnelTab({
         <label className="mb-0.5 block text-xs text-slate-500">姓名 *</label>
         <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
           placeholder="输入姓名"
-          className="w-28 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none" />
+          className="w-28 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none" />
       </div>
       <div>
         <label className="mb-0.5 block text-xs text-slate-500">层级</label>
         <select value={form.level} onChange={e => setForm(f => ({ ...f, level: e.target.value as PersonnelLevel }))}
-          className="w-24 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-200 focus:border-blue-500 focus:outline-none">
+          className="w-24 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-800 focus:border-blue-500 focus:outline-none">
           <option value="school">校级</option>
           <option value="college">学院级</option>
           <option value="department">专业级</option>
@@ -615,7 +615,7 @@ function PersonnelTab({
       <div>
         <label className="mb-0.5 block text-xs text-slate-500">分类</label>
         <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-          className="w-32 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-200 focus:border-blue-500 focus:outline-none">
+          className="w-32 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-800 focus:border-blue-500 focus:outline-none">
           {PERSON_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
@@ -623,7 +623,7 @@ function PersonnelTab({
         <div>
           <label className="mb-0.5 block text-xs text-slate-500">学院</label>
           <select value={form.college} onChange={e => setForm(f => ({ ...f, college: e.target.value }))}
-            className="w-36 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-slate-200 focus:border-blue-500 focus:outline-none">
+            className="w-36 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-800 focus:border-blue-500 focus:outline-none">
             <option value="">-- 不限 --</option>
             {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
@@ -633,7 +633,7 @@ function PersonnelTab({
         <label className="mb-0.5 block text-xs text-slate-500">职务</label>
         <input type="text" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
           placeholder="如：院长"
-          className="w-28 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none" />
+          className="w-28 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none" />
       </div>
       <button onClick={handleSubmit} disabled={!form.name.trim()}
         className="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50 transition-colors">
@@ -641,14 +641,14 @@ function PersonnelTab({
       </button>
       {(showAddForm || editingId) && (
         <button onClick={cancelEdit}
-          className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:text-slate-300 transition-colors">取消</button>
+          className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-500 hover:text-slate-600 transition-colors">取消</button>
       )}
     </div>
   )
 
   const PersonRow = ({ p }: { p: PersonEntry }) => (
-    <tr className="text-slate-400 hover:bg-slate-800/30 group">
-      <td className="px-3 py-1.5 text-slate-200 font-medium">{p.name}</td>
+    <tr className="text-slate-500 hover:bg-slate-100 group">
+      <td className="px-3 py-1.5 text-slate-800 font-medium">{p.name}</td>
       <td className="px-3 py-1.5"><LevelBadge level={p.level} /></td>
       <td className="px-3 py-1.5 text-xs">{p.category}</td>
       <td className="px-3 py-1.5 text-xs">{p.college || '-'}</td>
@@ -657,11 +657,11 @@ function PersonnelTab({
         {!readonly && (
           <>
             <button onClick={() => startEdit(p)}
-              className="text-xs text-slate-600 hover:text-blue-400 px-1.5 py-0.5 rounded transition-colors opacity-0 group-hover:opacity-100">
+              className="text-xs text-slate-500 hover:text-blue-600 px-1.5 py-0.5 rounded transition-colors opacity-0 group-hover:opacity-100">
               编辑
             </button>
             <button onClick={() => { if (confirm(`确定删除 ${p.name}？`)) onDelete(p.id) }}
-              className="text-xs text-slate-600 hover:text-red-400 px-1.5 py-0.5 rounded transition-colors opacity-0 group-hover:opacity-100">
+              className="text-xs text-slate-500 hover:text-red-400 px-1.5 py-0.5 rounded transition-colors opacity-0 group-hover:opacity-100">
               删除
             </button>
           </>
@@ -677,12 +677,12 @@ function PersonnelTab({
     return (
       <div className="mb-4">
         <h4 className={`text-xs font-semibold uppercase tracking-wider mb-2 ${colorClass}`}>
-          {label} <span className="font-normal text-slate-600">({items.length}人)</span>
+          {label} <span className="font-normal text-slate-500">({items.length}人)</span>
         </h4>
-        <div className="rounded-lg border border-slate-200/10 overflow-hidden">
+        <div className="rounded-lg border border-slate-200 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-xs text-slate-500 border-b border-slate-200/5 bg-slate-900/50">
+              <tr className="text-xs text-slate-500 border-b border-slate-100 bg-white">
                 <th className="text-left px-3 py-1.5 font-medium">姓名</th>
                 <th className="text-left px-3 py-1.5 font-medium">层级</th>
                 <th className="text-left px-3 py-1.5 font-medium">分类</th>
@@ -691,7 +691,7 @@ function PersonnelTab({
                 <th className="text-right px-3 py-1.5 font-medium"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200/5">
+            <tbody className="divide-y divide-slate-100">
               {items.map(p => <PersonRow key={p.id} p={p} />)}
             </tbody>
           </table>
@@ -704,29 +704,29 @@ function PersonnelTab({
     <div className="max-w-3xl space-y-4">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex gap-0.5 rounded-lg bg-slate-900 p-0.5 border border-slate-700/50">
+        <div className="flex gap-0.5 rounded-lg bg-white p-0.5 border border-slate-200">
           {(['all', 'school', 'college', 'department', 'class', 'course', 'individual'] as const).map(lvl => (
             <button key={lvl} onClick={() => setLevelFilter(lvl)}
               className={`px-3 py-1 text-xs rounded-md font-medium transition-colors ${
-                levelFilter === lvl ? 'bg-slate-700 text-slate-200' : 'text-slate-500 hover:text-slate-300'
+                levelFilter === lvl ? 'bg-slate-700 text-slate-800' : 'text-slate-500 hover:text-slate-600'
               }`}>
               {lvl === 'all' ? '全部' : LEVEL_LABELS[lvl]}
             </button>
           ))}
         </div>
         <select value={collegeFilter} onChange={e => setCollegeFilter(e.target.value)}
-          className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300 focus:border-blue-500 focus:outline-none">
+          className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600 focus:border-blue-500 focus:outline-none">
           <option value="">所有学院</option>
           {usedColleges.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         <input type="text" value={searchText} onChange={e => setSearchText(e.target.value)}
           placeholder="搜索姓名/职务..."
-          className="w-40 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none" />
+          className="w-40 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none" />
 
         <div className="flex-1" />
 
         {readonly ? (
-          <span className="text-xs text-slate-600">名单只读(由管理员维护)</span>
+          <span className="text-xs text-slate-500">名单只读(由管理员维护)</span>
         ) : (
           <>
             <button onClick={() => { setShowAddForm(!showAddForm); setEditingId(null); setForm(emptyForm()) }}
@@ -735,18 +735,18 @@ function PersonnelTab({
             </button>
             <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={onImport} className="hidden" />
             <button onClick={() => { setShowCollect(true); setCollectResult(null); setCollectError(''); setCollectPreview(false) }}
-              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300 hover:bg-slate-800 transition-colors">
+              className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs text-slate-600 hover:bg-slate-100 transition-colors">
               🌐 采集人员
             </button>
             <button onClick={() => fileRef.current?.click()}
-              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300 hover:bg-slate-800 transition-colors">
+              className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs text-slate-600 hover:bg-slate-100 transition-colors">
               📎 导入 Excel
             </button>
           </>
         )}
         {!readonly && personnel.length > 0 && (
           <button onClick={() => { if (confirm('确定清空全部人员？')) onClear() }}
-            className="rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-1 text-xs text-red-400 hover:bg-red-500/10 transition-colors">
+            className="rounded-lg border border-red-200 bg-red-50 px-3 py-1 text-xs text-red-400 hover:bg-red-50 transition-colors">
             清空全部
           </button>
         )}
@@ -754,30 +754,30 @@ function PersonnelTab({
 
       {/* Add/Edit form */}
       {(showAddForm || editingId) && (
-        <div className={`rounded-xl border p-4 ${editingId ? 'border-yellow-500/20 bg-yellow-500/5' : 'border-blue-500/20 bg-blue-500/5'}`}>
-          {editingId && <p className="text-xs text-yellow-400 mb-2">正在编辑：{personnel.find(p => p.id === editingId)?.name}</p>}
+        <div className={`rounded-xl border p-4 ${editingId ? 'border-yellow-500/20 bg-yellow-500/5' : 'border-blue-200 bg-blue-50'}`}>
+          {editingId && <p className="text-xs text-amber-600 mb-2">正在编辑：{personnel.find(p => p.id === editingId)?.name}</p>}
           <FormFields />
         </div>
       )}
 
       {/* Info bar */}
       <div className="flex items-center gap-4 text-xs text-slate-500">
-        <span>共 <span className="text-slate-300 font-medium">{personnel.length}</span> 人</span>
+        <span>共 <span className="text-slate-600 font-medium">{personnel.length}</span> 人</span>
         {levelFilter === 'all' && (
           <>
-            <span className="text-purple-400">校级 {schoolGroup.length}</span>
-            <span className="text-blue-400">学院 {collegeGroup.length}</span>
-            <span className="text-teal-400">专业 {deptGroup.length}</span>
-            <span className="text-emerald-400">班级 {classGroup.length}</span>
-            <span className="text-rose-400">课程 {courseGroup.length}</span>
-            <span className="text-slate-400">个人 {individualGroup.length}</span>
+            <span className="text-purple-600">校级 {schoolGroup.length}</span>
+            <span className="text-blue-600">学院 {collegeGroup.length}</span>
+            <span className="text-teal-600">专业 {deptGroup.length}</span>
+            <span className="text-emerald-600">班级 {classGroup.length}</span>
+            <span className="text-rose-600">课程 {courseGroup.length}</span>
+            <span className="text-slate-500">个人 {individualGroup.length}</span>
           </>
         )}
       </div>
 
       {/* Grouped list */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-slate-600">
+        <div className="flex flex-col items-center justify-center py-12 text-slate-500">
           <span className="text-3xl mb-2">📋</span>
           <p className="text-sm">
             {personnel.length === 0 ? '还没有添加任何人员，点击"添加人员"或导入Excel' : '没有匹配的人员'}
@@ -787,12 +787,12 @@ function PersonnelTab({
         <>
           {levelFilter === 'all' ? (
             <>
-              <GroupSection label="校级人员" items={schoolGroup} colorClass="text-purple-400" />
-              <GroupSection label="学院级人员" items={collegeGroup} colorClass="text-blue-400" />
-              <GroupSection label="专业级人员" items={deptGroup} colorClass="text-teal-400" />
-              <GroupSection label="班级级人员" items={classGroup} colorClass="text-emerald-400" />
-              <GroupSection label="课程" items={courseGroup} colorClass="text-rose-400" />
-              <GroupSection label="个人" items={individualGroup} colorClass="text-slate-400" />
+              <GroupSection label="校级人员" items={schoolGroup} colorClass="text-purple-600" />
+              <GroupSection label="学院级人员" items={collegeGroup} colorClass="text-blue-600" />
+              <GroupSection label="专业级人员" items={deptGroup} colorClass="text-teal-600" />
+              <GroupSection label="班级级人员" items={classGroup} colorClass="text-emerald-600" />
+              <GroupSection label="课程" items={courseGroup} colorClass="text-rose-600" />
+              <GroupSection label="个人" items={individualGroup} colorClass="text-slate-500" />
             </>
           ) : (
             <GroupSection
@@ -805,11 +805,11 @@ function PersonnelTab({
               }
               items={filtered}
               colorClass={
-                levelFilter === 'school' ? 'text-purple-400' :
-                levelFilter === 'college' ? 'text-blue-400' :
-                levelFilter === 'department' ? 'text-teal-400' :
-                levelFilter === 'class' ? 'text-emerald-400' :
-                levelFilter === 'course' ? 'text-rose-400' : 'text-slate-400'
+                levelFilter === 'school' ? 'text-purple-600' :
+                levelFilter === 'college' ? 'text-blue-600' :
+                levelFilter === 'department' ? 'text-teal-600' :
+                levelFilter === 'class' ? 'text-emerald-600' :
+                levelFilter === 'course' ? 'text-rose-600' : 'text-slate-500'
               }
             />
           )}
@@ -819,34 +819,34 @@ function PersonnelTab({
       {/* ── Collect Modal ── */}
       {showCollect && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => { if (!collecting) setShowCollect(false) }}>
-          <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-slate-700/50 px-5 py-3">
-              <h3 className="text-base font-semibold text-slate-100">🌐 采集学院人员</h3>
-              <button onClick={() => { if (!collecting) setShowCollect(false) }} className="text-slate-500 hover:text-slate-300 text-lg leading-none">&times;</button>
+          <div className="w-full max-w-lg rounded-2xl border border-slate-300 bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+              <h3 className="text-base font-semibold text-slate-900">🌐 采集学院人员</h3>
+              <button onClick={() => { if (!collecting) setShowCollect(false) }} className="text-slate-500 hover:text-slate-600 text-lg leading-none">&times;</button>
             </div>
             <div className="p-5 space-y-4">
               {!collectPreview ? (
                 <>
-                  <p className="text-sm text-slate-400">AI 将自动访问学院官网，采集领导、系主任、教授、辅导员等公开信息。</p>
+                  <p className="text-sm text-slate-500">AI 将自动访问学院官网，采集领导、系主任、教授、辅导员等公开信息。</p>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-300">选择学院</label>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">选择学院</label>
                     <select value={collectDept} onChange={e => setCollectDept(e.target.value)} disabled={collecting}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-200 focus:border-blue-500 focus:outline-none disabled:opacity-50">
+                      className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:border-blue-500 focus:outline-none disabled:opacity-50">
                       {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
                   </div>
                   {collecting && (
                     <div className="flex items-center gap-3 py-4">
-                      <div className="w-6 h-6 rounded-full border-3 border-slate-700 border-t-blue-500 animate-spin" />
-                      <p className="text-sm text-slate-400">正在访问 {collectDept} 官网，采集人员信息...</p>
+                      <div className="w-6 h-6 rounded-full border-3 border-slate-300 border-t-blue-500 animate-spin" />
+                      <p className="text-sm text-slate-500">正在访问 {collectDept} 官网，采集人员信息...</p>
                     </div>
                   )}
                   {collectError && (
-                    <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">{collectError}</div>
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-400">{collectError}</div>
                   )}
                   <div className="flex gap-3 justify-end pt-2">
                     <button onClick={() => setShowCollect(false)} disabled={collecting}
-                      className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-400 hover:text-slate-300 disabled:opacity-50 transition-colors">取消</button>
+                      className="rounded-xl border border-slate-300 px-4 py-2 text-sm text-slate-500 hover:text-slate-600 disabled:opacity-50 transition-colors">取消</button>
                     <button onClick={() => void handleCollect()} disabled={collecting}
                       className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50 transition-colors">
                       {collecting ? '采集中...' : '开始采集'}
@@ -855,14 +855,14 @@ function PersonnelTab({
                 </>
               ) : (
                 <>
-                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-400">
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-600">
                     采集完成！共获取 <span className="font-bold">{collectResult?.length || 0}</span> 条人员信息。
                   </div>
                   {collectResult && collectResult.length > 0 && (
-                    <div className="max-h-60 overflow-y-auto rounded-xl border border-slate-700/50">
+                    <div className="max-h-60 overflow-y-auto rounded-xl border border-slate-200">
                       <table className="w-full text-sm">
-                        <thead className="sticky top-0 bg-slate-950">
-                          <tr className="text-xs text-slate-500 border-b border-slate-700/50">
+                        <thead className="sticky top-0 bg-slate-50">
+                          <tr className="text-xs text-slate-500 border-b border-slate-200">
                             <th className="px-2 py-1.5 text-left font-medium w-8">✓</th>
                             <th className="px-2 py-1.5 text-left font-medium">姓名</th>
                             <th className="px-2 py-1.5 text-left font-medium">分类</th>
@@ -871,7 +871,7 @@ function PersonnelTab({
                         </thead>
                         <tbody className="divide-y divide-slate-800/50">
                           {collectResult.map(e => (
-                            <tr key={e.id} className="hover:bg-slate-800/30">
+                            <tr key={e.id} className="hover:bg-slate-100">
                               <td className="px-2 py-1.5">
                                 <input type="checkbox" checked={selectedIds.has(e.id)}
                                   onChange={() => {
@@ -880,9 +880,9 @@ function PersonnelTab({
                                     setSelectedIds(next)
                                   }} className="rounded accent-blue-500" />
                               </td>
-                              <td className="px-2 py-1.5 text-slate-200">{e.name}</td>
-                              <td className="px-2 py-1.5 text-xs text-slate-400">{e.category}</td>
-                              <td className="px-2 py-1.5 text-xs text-slate-400">{e.role || '-'}</td>
+                              <td className="px-2 py-1.5 text-slate-800">{e.name}</td>
+                              <td className="px-2 py-1.5 text-xs text-slate-500">{e.category}</td>
+                              <td className="px-2 py-1.5 text-xs text-slate-500">{e.role || '-'}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -891,7 +891,7 @@ function PersonnelTab({
                   )}
                   <div className="flex gap-3 justify-end pt-2">
                     <button onClick={() => { setCollectPreview(false); setCollectResult(null) }}
-                      className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-400 hover:text-slate-300 transition-colors">放弃</button>
+                      className="rounded-xl border border-slate-300 px-4 py-2 text-sm text-slate-500 hover:text-slate-600 transition-colors">放弃</button>
                     <button onClick={importCollected}
                       className="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-500 transition-colors">
                       导入选中 ({selectedIds.size})
@@ -982,26 +982,26 @@ function UsersTab() {
   return (
     <div className="max-w-3xl space-y-4">
       {error && (
-        <div className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-2 text-xs text-red-400">{error}</div>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-xs text-red-400">{error}</div>
       )}
 
       {/* 创建用户 */}
-      <div className="rounded-xl border border-slate-200/10 bg-slate-900/50 p-4">
-        <h3 className="mb-3 text-sm font-medium text-slate-300">新建用户</h3>
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <h3 className="mb-3 text-sm font-medium text-slate-600">新建用户</h3>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <input type="text" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })}
-            placeholder="用户名" className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 placeholder-slate-600 focus:border-blue-500 focus:outline-none" />
+            placeholder="用户名" className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none" />
           <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
-            placeholder="密码(至少8位)" className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 placeholder-slate-600 focus:border-blue-500 focus:outline-none" />
+            placeholder="密码(至少8位)" className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none" />
           <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
-            className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-blue-500 focus:outline-none">
+            className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none">
             <option value="college">院级用户</option>
             <option value="school">校级用户</option>
             <option value="admin">管理员</option>
           </select>
           {form.role === 'college' && (
             <select value={form.college} onChange={(e) => setForm({ ...form, college: e.target.value })}
-              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-blue-500 focus:outline-none">
+              className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none">
               {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
           )}
@@ -1013,10 +1013,10 @@ function UsersTab() {
       </div>
 
       {/* 用户列表 */}
-      <div className="rounded-xl border border-slate-200/10 overflow-hidden">
+      <div className="rounded-xl border border-slate-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-xs text-slate-500 border-b border-slate-200/5 bg-slate-900/50">
+            <tr className="text-xs text-slate-500 border-b border-slate-100 bg-white">
               <th className="text-left px-4 py-2 font-medium">用户名</th>
               <th className="text-left px-4 py-2 font-medium">角色</th>
               <th className="text-left px-4 py-2 font-medium">学院</th>
@@ -1024,14 +1024,14 @@ function UsersTab() {
               <th className="text-right px-4 py-2 font-medium">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200/5">
+          <tbody className="divide-y divide-slate-100">
             {users.map((u) => (
-              <tr key={u.id} className="text-slate-400 hover:bg-slate-800/30">
-                <td className="px-4 py-2 text-slate-200 font-medium">{u.username}</td>
+              <tr key={u.id} className="text-slate-500 hover:bg-slate-100">
+                <td className="px-4 py-2 text-slate-800 font-medium">{u.username}</td>
                 <td className="px-4 py-2 text-xs">
                   {editingId === u.id ? (
                     <select value={editForm.role} onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                      className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200">
+                      className="rounded border border-slate-300 bg-slate-50 px-2 py-1 text-xs text-slate-800">
                       <option value="college">院级用户</option>
                       <option value="school">校级用户</option>
                       <option value="admin">管理员</option>
@@ -1043,7 +1043,7 @@ function UsersTab() {
                 <td className="px-4 py-2 text-xs">
                   {editingId === u.id && editForm.role === 'college' ? (
                     <select value={editForm.college} onChange={(e) => setEditForm({ ...editForm, college: e.target.value })}
-                      className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200">
+                      className="rounded border border-slate-300 bg-slate-50 px-2 py-1 text-xs text-slate-800">
                       {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
                     </select>
                   ) : (
@@ -1051,7 +1051,7 @@ function UsersTab() {
                   )}
                 </td>
                 <td className="px-4 py-2 text-xs">
-                  {u.disabled ? <span className="text-red-400">已禁用</span> : <span className="text-emerald-400">正常</span>}
+                  {u.disabled ? <span className="text-red-400">已禁用</span> : <span className="text-emerald-600">正常</span>}
                 </td>
                 <td className="px-4 py-2 text-right text-xs space-x-1">
                   {editingId === u.id ? (
@@ -1059,12 +1059,12 @@ function UsersTab() {
                       <button onClick={() => void handleSaveEdit(u.id)} disabled={busy}
                         className="rounded bg-emerald-600 px-2 py-1 text-white hover:bg-emerald-500 disabled:opacity-50">保存</button>
                       <button onClick={() => setEditingId(null)}
-                        className="rounded border border-slate-700 px-2 py-1 text-slate-400 hover:text-slate-200">取消</button>
+                        className="rounded border border-slate-300 px-2 py-1 text-slate-500 hover:text-slate-800">取消</button>
                     </>
                   ) : (
                     <>
                       <button onClick={() => { setEditingId(u.id); setEditForm({ role: u.role, college: u.college ?? String(DEPARTMENTS[0]), password: '' }) }}
-                        className="rounded border border-slate-700 px-2 py-1 text-slate-400 hover:text-blue-400">编辑</button>
+                        className="rounded border border-slate-300 px-2 py-1 text-slate-500 hover:text-blue-600">编辑</button>
                       <button onClick={() => {
                         const p = window.prompt(`为 ${u.username} 设置新密码(至少8位)`)
                         if (p && p.length >= 8) {
@@ -1073,13 +1073,13 @@ function UsersTab() {
                           setError('密码至少 8 位')
                         }
                       }}
-                        className="rounded border border-slate-700 px-2 py-1 text-slate-400 hover:text-amber-400">重置密码</button>
+                        className="rounded border border-slate-300 px-2 py-1 text-slate-500 hover:text-amber-600">重置密码</button>
                       <button onClick={() => void handleToggleDisabled(u.id, !u.disabled)}
-                        className="rounded border border-slate-700 px-2 py-1 text-slate-400 hover:text-amber-400">
+                        className="rounded border border-slate-300 px-2 py-1 text-slate-500 hover:text-amber-600">
                         {u.disabled ? '启用' : '禁用'}
                       </button>
                       <button onClick={() => void handleDelete(u.id, u.username)}
-                        className="rounded border border-red-500/20 px-2 py-1 text-red-400 hover:bg-red-500/10">删除</button>
+                        className="rounded border border-red-200 px-2 py-1 text-red-400 hover:bg-red-50">删除</button>
                     </>
                   )}
                 </td>
@@ -1096,8 +1096,12 @@ function UsersTab() {
 function XhsTab() {
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null) // null = checking
   const [msg, setMsg] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [qrCode, setQrCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  /** idle | generating(发起中) | scanning(显示二维码/扫码中) */
+  const [step, setStep] = useState<'idle' | 'generating' | 'scanning'>('idle')
+  const [qrImage, setQrImage] = useState('')   // 二维码图片(dataURL,可扫码)
+  const [qrAscii, setQrAscii] = useState('')   // 无链接时退化的 ASCII
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const api = (url: string, method = 'GET', timeout = 15000) => {
     const ctrl = new AbortController()
@@ -1111,15 +1115,23 @@ function XhsTab() {
       .finally(() => clearTimeout(timer))
   }
 
+  const stopPolling = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current)
+      pollRef.current = null
+    }
+  }
+
   useEffect(() => {
     api('/api/xhs/status').then(d => {
       setLoggedIn(d.ok && !d.output.includes('Not logged in'))
       if (d.ok) setMsg(d.output.slice(0, 200))
     })
+    return stopPolling
   }, [])
 
   const doLogin = async () => {
-    setLoading(true)
+    setBusy(true)
     setMsg('')
     const d = await api('/api/xhs/login', 'POST')
     setMsg(d.output)
@@ -1127,72 +1139,147 @@ function XhsTab() {
       const s = await api('/api/xhs/status')
       setLoggedIn(s.ok && !s.output.includes('Not logged in'))
     }
-    setLoading(false)
+    setBusy(false)
   }
 
-  const doQrcode = async () => {
-    setLoading(true)
-    setQrCode('')
-    const d = await api('/api/xhs/login-qrcode', 'POST', 300000)
-    setQrCode(d.output || '')
-    setMsg('请扫码')
-    // Poll for login
-    for (let i = 0; i < 60; i++) {
-      await new Promise(r => setTimeout(r, 2000))
+  const generateQr = async () => {
+    setStep('generating')
+    setMsg('正在启动扫码登录,请稍候...')
+    setQrImage('')
+    setQrAscii('')
+
+    const d = await api('/api/xhs/login-qrcode', 'POST', 60000)
+    if (!d.ok) {
+      setMsg(d.output || '启动扫码登录失败')
+      setStep('idle')
+      return
+    }
+    setMsg('请用小红书 App 扫描二维码(生成后请尽快扫码)')
+
+    // 有链接 → 渲染成图片(大、清晰可扫);否则退化为 ASCII
+    if (typeof d.qrUrl === 'string' && d.qrUrl) {
+      setQrAscii('')
+      try {
+        const QRCode = (await import('qrcode')).default
+        setQrImage(await QRCode.toDataURL(d.qrUrl, { width: 240, margin: 1 }))
+      } catch {
+        setQrImage('')
+        setQrAscii(d.output || '')
+      }
+    } else {
+      setQrAscii(d.output || '')
+    }
+
+    setStep('scanning')
+    stopPolling()
+    let tries = 0
+    pollRef.current = setInterval(async () => {
+      tries += 1
       const s = await api('/api/xhs/status')
       if (s.ok && !s.output.includes('Not logged in')) {
         setLoggedIn(true)
-        setMsg(s.output.slice(0, 200))
-        setQrCode('')
-        setLoading(false)
+        setMsg('✅ 登录成功:' + s.output.slice(0, 120))
+        setStep('idle')
+        setQrImage('')
+        setQrAscii('')
+        stopPolling()
         return
       }
-    }
-    setLoggedIn(false)
-    setQrCode('')
-    setLoading(false)
+      if (tries >= 90) {
+        setMsg('二维码已过期,请点击「重新生成」再试')
+        setStep('idle')
+        setQrImage('')
+        setQrAscii('')
+        stopPolling()
+      }
+    }, 2000)
+  }
+
+  const cancelQr = async () => {
+    await api('/api/xhs/cancel', 'POST')
+    stopPolling()
+    setStep('idle')
+    setQrImage('')
+    setQrAscii('')
+    setMsg('已取消扫码登录')
   }
 
   const doLogout = async () => {
-    setLoading(true)
+    setBusy(true)
     await api('/api/xhs/logout', 'POST')
     setLoggedIn(false)
     setMsg('')
-    setLoading(false)
+    setBusy(false)
   }
 
   return (
     <div className="max-w-lg space-y-4">
-      <div className="rounded-xl border border-slate-200/10 bg-slate-900/50 p-6 text-center">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
         <span className="text-3xl">📕</span>
-        <h3 className="text-base font-semibold text-slate-200 mt-2 mb-1">小红书</h3>
+        <h3 className="text-base font-semibold text-slate-800 mt-2 mb-1">小红书</h3>
         <p className="text-sm text-slate-500 mb-4">
           {loggedIn === null ? '检测中...' : loggedIn ? '✅ 已登录' : '未登录'}
         </p>
-        {msg && <p className="text-xs text-slate-500 font-mono mb-4 whitespace-pre-wrap max-h-20 overflow-auto">{msg}</p>}
 
-        {qrCode && (
-          <div className="mb-4 p-3 bg-white rounded-lg inline-block">
-            <pre className="text-[6px] leading-[6px] text-black font-mono select-all whitespace-pre">{qrCode}</pre>
+        {/* 二维码图片(推荐) */}
+        {qrImage && (
+          <div className="mb-4 inline-block rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+            <img src={qrImage} alt="小红书登录二维码" className="h-60 w-60" />
+          </div>
+        )}
+        {/* 退化的 ASCII 二维码 */}
+        {!qrImage && qrAscii && step === 'scanning' && (
+          <div className="mb-4 inline-block max-w-full overflow-x-auto rounded-lg border border-slate-200 bg-white p-3">
+            <pre className="text-[8px] leading-[8px] text-black font-mono select-all whitespace-pre">{qrAscii}</pre>
           </div>
         )}
 
+        {/* 扫码中:进度提示 */}
+        {step === 'scanning' && (
+          <div className="mb-4 flex items-center justify-center gap-2 text-xs text-slate-500">
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-blue-500" />
+            等待扫码(超时 3 分钟自动过期)
+          </div>
+        )}
+
+        {msg && step !== 'scanning' && (
+          <p className="mb-4 text-xs text-slate-500 whitespace-pre-wrap break-all max-h-20 overflow-auto font-mono">{msg}</p>
+        )}
+
         <div className="flex flex-col gap-2 items-center">
-          {!loggedIn && (
+          {!loggedIn && step === 'idle' && (
             <>
-              <button onClick={doLogin} disabled={loading}
+              <button onClick={doLogin} disabled={busy}
                 className="w-48 rounded-xl bg-gradient-to-r from-red-500 to-pink-500 px-4 py-2.5 text-sm font-medium text-white hover:from-red-400 disabled:opacity-50 transition-all">
-                {loading ? '...' : '🔑 浏览器登录'}
+                {busy ? '...' : '🔑 浏览器登录'}
               </button>
-              <button onClick={doQrcode} disabled={loading}
-                className="w-48 rounded-xl border border-slate-600 bg-slate-800 px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 disabled:opacity-50 transition-all">
-                {loading ? '...' : '📱 扫码登录'}
+              <button onClick={() => void generateQr()} disabled={busy}
+                className="w-48 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-all">
+                📱 扫码登录
+              </button>
+            </>
+          )}
+          {!loggedIn && step === 'generating' && (
+            <button disabled
+              className="w-48 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-500">
+              正在生成二维码...
+            </button>
+          )}
+          {!loggedIn && step === 'scanning' && (
+            <>
+              <button onClick={() => void cancelQr()} disabled={busy}
+                className="w-48 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-500 hover:bg-slate-50 disabled:opacity-50 transition-all">
+                取消
+              </button>
+              <button onClick={() => void generateQr()} disabled={busy}
+                className="w-48 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-500 hover:bg-slate-50 disabled:opacity-50 transition-all">
+                重新生成
               </button>
             </>
           )}
           {loggedIn && (
-            <button onClick={doLogout} disabled={loading}
-              className="w-48 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/20 transition-all">
+            <button onClick={doLogout} disabled={busy}
+              className="w-48 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-600 hover:bg-red-100 disabled:opacity-50 transition-all">
               退出登录
             </button>
           )}

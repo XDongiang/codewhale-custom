@@ -64,10 +64,10 @@ export function MigrationBanner() {
 
   return (
     <div className="fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-4">
-      <div className="flex max-w-xl items-center gap-4 rounded-xl border border-blue-500/30 bg-slate-900 px-5 py-4 shadow-xl shadow-blue-500/10">
+      <div className="flex max-w-xl items-center gap-4 rounded-xl border border-blue-500/30 bg-white px-5 py-4 shadow-xl shadow-blue-500/10">
         <span className="text-2xl">🔄</span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-slate-200">
+          <p className="text-sm font-medium text-slate-800">
             检测到本浏览器的旧数据(名单 / 报告),是否迁移到服务器?
           </p>
           <p className="mt-0.5 text-xs text-slate-500">
@@ -84,7 +84,7 @@ export function MigrationBanner() {
           </button>
           <button
             onClick={handleDismiss}
-            className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-500 hover:text-slate-800 transition-colors"
           >
             暂不
           </button>
