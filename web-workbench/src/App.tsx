@@ -5,6 +5,7 @@ import { ChatView } from './pages/ChatView'
 import { HistoryPage } from './pages/HistoryPage'
 import { MonitorPage } from './pages/MonitorPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { KnowledgePage } from './pages/KnowledgePage'
 import { LoginPage } from './pages/LoginPage'
 import { useAuthStore } from './stores/auth-store'
 import { setUnauthorizedHandler } from './lib/api/server'
@@ -55,6 +56,7 @@ export function App() {
                 <Route path="/chat/:id" element={<ChatView />} />
                 <Route path="/history" element={<HistoryPage />} />
                 <Route path="/monitor" element={<MonitorPage />} />
+                <Route path="/kb" element={<KnowledgePage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

@@ -26,6 +26,8 @@ export interface ServerConfig {
   adminPassword: string | null
   /** 用户会话有效期(毫秒),默认 30 天 */
   sessionTtlMs: number
+  /** 知识库问答使用的模型 */
+  kbModel: string
 }
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
@@ -50,6 +52,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     xvfbArgs: ['-a', '-s', '-nolisten unix +extension RANDR'],
     adminPassword: env.ADMIN_PASSWORD && env.ADMIN_PASSWORD !== '' ? env.ADMIN_PASSWORD : null,
     sessionTtlMs: Number.isFinite(ttlDays) && ttlDays > 0 ? ttlDays * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000,
+    kbModel: envStr(env, 'KB_MODEL', 'deepseek-v4-pro'),
   }
 }
 

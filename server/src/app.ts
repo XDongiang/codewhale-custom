@@ -5,6 +5,8 @@ import { JsonStore } from './services/storage.js'
 import { PersonnelService, ReportsService } from './services/personnel.js'
 import { UserService } from './services/users.js'
 import { SessionService } from './services/sessions.js'
+import { KbService } from './services/kb.js'
+import { createRuntimeClient } from './services/runtime.js'
 import type { RouteDeps } from './http/routes.js'
 
 export interface App {
@@ -25,8 +27,10 @@ export function createApp(config: ServerConfig): App {
   const users = new UserService(storage)
   const sessions = new SessionService(storage, config.sessionTtlMs)
   sessions.pruneExpired()
+  const kb = new KbService(storage)
+  const runtime = createRuntimeClient(config.runtimeUrl, config.authToken)
 
-  const deps: RouteDeps = { personnel, reports, users, sessions }
+  const deps: RouteDeps = { personnel, reports, users, sessions, kb, runtime }
   const server = startServer(config, deps)
 
   return {

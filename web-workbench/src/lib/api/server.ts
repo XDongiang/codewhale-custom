@@ -181,11 +181,58 @@ class ServerApi {
     return this.request('/api/reports', { method: 'PUT', body: JSON.stringify({ reports }) })
   }
 
+  // ── Knowledge Base ──
+  listKbDocuments(): Promise<KbDocumentMeta[]> {
+    return this.request('/api/kb/documents')
+  }
+
+  createKbDocument(input: { filename: string; college?: string; scope: 'school' | 'college'; text: string }): Promise<KbDocumentMeta> {
+    return this.request('/api/kb/documents', { method: 'POST', body: JSON.stringify(input) })
+  }
+
+  deleteKbDocument(id: string): Promise<{ ok: boolean }> {
+    return this.request(`/api/kb/documents/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  }
+
+  kbSearch(q: string): Promise<KbSearchResult> {
+    return this.request(`/api/kb/search?q=${encodeURIComponent(q)}`)
+  }
+
+  kbAsk(question: string): Promise<KbAskResponse> {
+    return this.request('/api/kb/ask', { method: 'POST', body: JSON.stringify({ question }) })
+  }
+
   // ── Mail ──
   sendReportMail(payload: SendMailPayload): Promise<SendMailResponse> {
     return this.request('/api/mail/send-report', { method: 'POST', body: JSON.stringify(payload) })
   }
 }
+
+export interface KbDocumentMeta {
+  id: string
+  filename: string
+  college?: string
+  scope: 'school' | 'college'
+  uploadedBy: string
+  uploadedAt: string
+  charCount: number
+  chunkCount: number
+}
+
+export interface KbSearchResult {
+  results: Array<{
+    doc: { id: string; filename: string; college?: string; scope: 'school' | 'college' }
+    chunks: Array<{ idx: number; text: string }>
+  }>
+}
+
+export interface KbAskResponse {
+  ok: boolean
+  answer: string
+  threadId: string
+  sources: Array<{ filename: string; college: string | null; scope: 'school' | 'college'; chunks: number }>
+}
+
 
 export const serverApi = new ServerApi()
 

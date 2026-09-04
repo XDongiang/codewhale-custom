@@ -47,6 +47,10 @@ npm run test -w server    # vitest(单测 + 路由集成测试)
 | `/api/personnel/bulk` | POST | 批量导入(仅 admin) |
 | `/api/reports` | GET/POST/PUT | 报告列表/新增(读按角色过滤,写按范围校验;PUT 整表替换仅 admin) |
 | `/api/reports/:id` | DELETE | 删除报告(角色范围校验) |
+| `/api/kb/documents` | GET/POST | 知识库文件列表(按角色过滤)/ 上传(仅 admin) |
+| `/api/kb/documents/:id` | DELETE | 删除文件(仅 admin) |
+| `/api/kb/search?q=` | GET | 检索可见文件片段(BM25,返回出处) |
+| `/api/kb/ask` | POST | 检索 + agent 生成回答($kb-ask skill,返回答案与依据) |
 | `/api/mail/send-report` | POST | agently-cli 发送(支持确认 token) |
 | `/api/xhs/status` `/api/xhs/login` `/api/xhs/login-qrcode` `/api/xhs/logout` | 任意 | 小红书 CLI + 扫码登录 |
 | `/runtime-api/*` | 任意 | 反向代理到 Runtime(SSE 流式透传,注入 Runtime 凭证) |
@@ -63,3 +67,5 @@ npm run test -w server    # vitest(单测 + 路由集成测试)
 | 备份导出/还原 | ✅ | ❌ | ❌ |
 | 用户管理 | ✅ | ❌ | ❌ |
 | 监控执行 | 全部层级 | 全部层级 | 仅学院级且锁定本院(前端限制) |
+| 知识库文件 上传/删除 | ✅ | ❌ | ❌ |
+| 知识库 问答/检索 | 全部文件 | 全部文件 | 全校 + 本院 |

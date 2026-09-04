@@ -13,6 +13,7 @@ const ROLE_LABEL: Record<string, string> = {
 const navItems = [
   { to: '/', label: '对话', icon: '💬', end: true },
   { to: '/monitor', label: '舆情监控', icon: '📊' },
+  { to: '/kb', label: '知识库', icon: '📚' },
   { to: '/history', label: '历史', icon: '📋' },
   { to: '/settings', label: '设置', icon: '⚙️' },
 ]

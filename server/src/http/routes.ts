@@ -5,6 +5,8 @@ import { sendReportMail } from '../services/mail.js'
 import { runXhs, startQrLogin, killQrLogin } from '../services/xhs.js'
 import type { SessionService } from '../services/sessions.js'
 import type { UserRecord, UserService } from '../services/users.js'
+import { buildAskPrompt, type KbService } from '../services/kb.js'
+import type { RuntimeClient } from '../services/runtime.js'
 import { isAdmin, resolveUser } from './auth.js'
 import { readJsonBody, sendError, sendJson } from './json.js'
 import { proxyRequest } from './proxy.js'
@@ -15,6 +17,8 @@ export interface RouteDeps {
   reports: ReportsService
   users: UserService
   sessions: SessionService
+  kb: KbService
+  runtime: RuntimeClient
 }
 
 interface SegmentMatch {
@@ -349,6 +353,73 @@ export async function handleRequest(
         return true
       }
       sendJson(res, 200, { ok: true })
+      return true
+    }
+
+    // ── 文件知识库 ──
+    const kbDocs = matchSegments(['api', 'kb', 'documents'], segments)
+    if (kbDocs.matched) {
+      if (method === 'GET') {
+        sendJson(res, 200, deps.kb.listMeta(scopeOf(user)))
+        return true
+      }
+      if (!requireAdmin(res, user)) return true
+      if (method === 'POST') {
+        const body = await readJsonBody(req)
+        const doc = deps.kb.add({
+          filename: String(body['filename'] ?? ''),
+          college: body['college'] !== undefined ? String(body['college']) : undefined,
+          scope: body['scope'] === 'college' ? 'college' : 'school',
+          text: String(body['text'] ?? ''),
+          uploadedBy: user.username,
+        })
+        sendJson(res, 201, doc)
+        return true
+      }
+      sendError(res, 405, 'Method Not Allowed')
+      return true
+    }
+
+    const kbDocById = matchSegments(['api', 'kb', 'documents', ':id'], segments)
+    if (kbDocById.matched && method === 'DELETE') {
+      if (!requireAdmin(res, user)) return true
+      const removed = deps.kb.remove(kbDocById.params['id'] ?? '')
+      if (!removed) {
+        sendError(res, 404, '文件不存在')
+        return true
+      }
+      sendJson(res, 200, { ok: true })
+      return true
+    }
+
+    if (pathname === '/api/kb/search' && method === 'GET') {
+      const q = url.searchParams.get('q') ?? ''
+      const topK = Number.parseInt(url.searchParams.get('top_k') ?? '6', 10)
+      sendJson(res, 200, { results: deps.kb.search(q, scopeOf(user), Number.isFinite(topK) ? topK : 6) })
+      return true
+    }
+
+    if (pathname === '/api/kb/ask' && method === 'POST') {
+      const body = await readJsonBody(req)
+      const question = String(body['question'] ?? '').trim()
+      if (!question) {
+        sendError(res, 400, '问题不能为空')
+        return true
+      }
+      const hits = deps.kb.search(question, scopeOf(user))
+      const prompt = buildAskPrompt(question, hits)
+      try {
+        const result = await deps.runtime.ask(prompt, config.kbModel)
+        sendJson(res, 200, {
+          ok: true,
+          answer: result.answer,
+          threadId: result.threadId,
+          sources: hits.map((h) => ({ filename: h.doc.filename, college: h.doc.college ?? null, scope: h.doc.scope, chunks: h.chunks.length })),
+        })
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '问答服务不可用'
+        sendError(res, 502, `问答服务暂不可用:${message}。请确认 CodeWhale Runtime 已启动。`)
+      }
       return true
     }
 

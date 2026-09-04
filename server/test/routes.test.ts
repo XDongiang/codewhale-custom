@@ -22,6 +22,7 @@ beforeAll(async () => {
     xvfbArgs: ['-a', '-s', '-nolisten unix +extension RANDR'],
     adminPassword: 'admin-pass-123',
     sessionTtlMs: 60_000,
+    kbModel: 'deepseek-v4-pro',
   }
   app = createApp(config)
   await new Promise<void>((resolve) => app.server.listen(0, '127.0.0.1', resolve))
@@ -242,6 +243,94 @@ describe('RBAC:用户管理', () => {
     const admin = (await api('/api/auth/me', { token: adminToken })).json as { user: { id: string } }
     const { status } = await api(`/api/users/${admin.user.id}`, { method: 'DELETE', token: adminToken })
     expect(status).toBe(400)
+  })
+})
+
+
+describe('RBAC:知识库', () => {
+  let adminToken: string
+  let schoolToken: string
+  let collegeToken: string
+  let wenyuanToken: string
+
+  beforeAll(async () => {
+    adminToken = await login('admin', 'admin-pass-123')
+    schoolToken = await login('school1', 'pass-12345')
+    wenyuanToken = await login('wenyuan', 'pass-12345')
+    // 建一个物院账号(wenyuan 已是文学院)
+    await api('/api/users', {
+      method: 'POST',
+      token: adminToken,
+      body: { username: 'wuyuan', password: 'pass-12345', role: 'college', college: '物理学院' },
+    })
+    collegeToken = await login('wuyuan', 'pass-12345')
+  })
+
+  it('admin 上传全校/学院级文件', async () => {
+    const r1 = await api('/api/kb/documents', {
+      method: 'POST', token: adminToken,
+      body: { filename: '差旅管理办法.txt', scope: 'school', text: '差旅费报销办法。出差人员需凭发票报销差旅费。' },
+    })
+    expect(r1.status).toBe(201)
+    const r2 = await api('/api/kb/documents', {
+      method: 'POST', token: adminToken,
+      body: { filename: '文学院考勤细则.txt', scope: 'college', college: '文学院', text: '文学院考勤管理细则。考勤迟到扣分。' },
+    })
+    expect(r2.status).toBe(201)
+    const r3 = await api('/api/kb/documents', {
+      method: 'POST', token: adminToken,
+      body: { filename: '物理学院考勤细则.txt', scope: 'college', college: '物理学院', text: '物理学院考勤管理细则。考勤迟到扣分。' },
+    })
+    expect(r3.status).toBe(201)
+  })
+
+  it('空内容文件被拒', async () => {
+    const r = await api('/api/kb/documents', {
+      method: 'POST', token: adminToken,
+      body: { filename: '空.txt', scope: 'school', text: '   ' },
+    })
+    expect(r.status).toBe(400)
+  })
+
+  it('列表按角色过滤:校级全部,院级仅全校+本院', async () => {
+    const schoolDocs = (await api('/api/kb/documents', { token: schoolToken })).json as Array<{ filename: string }>
+    expect(schoolDocs.map((d) => d.filename).sort()).toEqual(['文学院考勤细则.txt', '差旅管理办法.txt', '物理学院考勤细则.txt'].sort())
+
+    const wenDocs = (await api('/api/kb/documents', { token: wenyuanToken })).json as Array<{ filename: string }>
+    expect(wenDocs.map((d) => d.filename).sort()).toEqual(['文学院考勤细则.txt', '差旅管理办法.txt'].sort())
+
+    const wuDocs = (await api('/api/kb/documents', { token: collegeToken })).json as Array<{ filename: string }>
+    expect(wuDocs.map((d) => d.filename).sort()).toEqual(['物理学院考勤细则.txt', '差旅管理办法.txt'].sort())
+  })
+
+  it('search 按角色过滤且命中', async () => {
+    const all = (await api('/api/kb/search?q=' + encodeURIComponent('差旅费'), { token: schoolToken })).json as { results: Array<{ doc: { filename: string } }> }
+    expect(all.results.map((r) => r.doc.filename)).toEqual(['差旅管理办法.txt'])
+
+    const wen = (await api('/api/kb/search?q=' + encodeURIComponent('考勤'), { token: wenyuanToken })).json as { results: Array<{ doc: { filename: string } }> }
+    expect(wen.results.map((r) => r.doc.filename)).toContain('文学院考勤细则.txt')
+    expect(wen.results.map((r) => r.doc.filename)).not.toContain('物理学院考勤细则.txt')
+  })
+
+  it('非 admin 不能上传/删除文件', async () => {
+    const post = await api('/api/kb/documents', {
+      method: 'POST', token: schoolToken,
+      body: { filename: 'x.txt', scope: 'school', text: '内容' },
+    })
+    expect(post.status).toBe(403)
+
+    const first = ((await api('/api/kb/documents', { token: schoolToken })).json as Array<{ id: string }>)[0]
+    const del = await api(`/api/kb/documents/${first.id}`, { method: 'DELETE', token: wenyuanToken })
+    expect(del.status).toBe(403)
+  })
+
+  it('ask 在 Runtime 不可达时给出明确错误', async () => {
+    const r = await api('/api/kb/ask', {
+      method: 'POST', token: schoolToken,
+      body: { question: '差旅费怎么报销?' },
+    })
+    expect(r.status).toBe(502)
+    expect((r.json as { error: string }).error).toMatch(/Runtime/)
   })
 })
 
